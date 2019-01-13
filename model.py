@@ -1,11 +1,18 @@
 import csv
 import os
-
-import cv2
+import argparse
 import numpy as np
+import matplotlib.pyplot as plt
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 
 from keras.models import Sequential
 from keras.layers import Flatten, Dense, Lambda, Activation, BatchNormalization, Dropout, MaxPooling2D, Conv2D
+from scipy import ndimage
+
+ap = argparse.ArgumentParser()
+ap.add_argument("-m", "--model", default='./output/model.h5', help="model file")
+# ap.add_argument("-v", "--video", help="input video")
+args = vars(ap.parse_args())
 
 data_folder = '../sample_driving_data'
 driving_log = 'driving_log.csv'
@@ -20,22 +27,24 @@ with open(os.path.join(data_folder, driving_log)) as csvfile:
 # print(lines)
 
 images = []
-measurements = []
+car_control_measurements = []
 for line in lines:
     filename = line[0].split('/')[-1]
     current_path = os.path.join(data_folder, "IMG", filename)
-    image = cv2.imread(current_path)
+    image = ndimage.imread(current_path)
     images.append(image)
-    measurements.append([float(line[3]), float(line[4]), float(line[5]), float(line[6])])
+    # car_control_measurements.append([float(line[3]), float(line[5]), float(line[6])])
+    #car_control_measurements.append([float(line[3])])
+    car_control_measurements.append(float(line[3]))
 
-measurements = np.array(measurements)
+car_control_measurements = np.array(car_control_measurements)
 
 
 # print(measurements)
 
-class MiniVGGNet:
+class LeNet:
     @staticmethod
-    def build(num_classes):
+    def build(num_outputs):
         model = Sequential()
 
         model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
@@ -72,27 +81,55 @@ class MiniVGGNet:
         model.add(Dropout(0.5))
 
         # Output Layer => num_classes x 1
-        model.add(Dense(units=num_classes))
+        model.add(Dense(units=num_outputs))
 
         # show and return the constructed network architecture
         model.summary()
         return model
 
 
-batch_size = 32
-epochs = 3
+def get_callbacks():
+    callbacks = [
+        TensorBoard(log_dir="logs/{}".format('Behavioral-Cloning')),
+        EarlyStopping(monitor='loss', min_delta=0, patience=5, mode='auto', verbose=1),
+        ModelCheckpoint(args['model'], save_best_only=False, verbose=1),
+        ReduceLROnPlateau(monitor='loss', factor=0.1, patience=2, verbose=1, mode='auto', epsilon=1e-4, cooldown=0,
+                          min_lr=0)]
+    return callbacks
+
+
+def plot_and_save_train_history(H):
+    plt.style.use("ggplot")
+    plt.figure()
+    plt.plot(np.arange(0, len(H.history["loss"])), H.history["loss"], label="train_loss")
+    plt.plot(np.arange(0, len(H.history["val_loss"])), H.history["val_loss"], label="val_loss")
+    plt.plot(np.arange(0, len(H.history["acc"])), H.history["acc"], label="train_acc")
+    plt.plot(np.arange(0, len(H.history["val_acc"])), H.history["val_acc"], label="val_acc")
+    plt.title("Training Loss and Accuracy")
+    plt.xlabel("Epoch #")
+    plt.ylabel("Loss/Accuracy")
+    plt.legend()
+    plt.savefig('./output/training-loss-and-accuracy.png')
+    plt.show()
+
+
+# trainig hyperparameter
+batch_size = 128
+epochs = 1000
 
 X_train = np.array(images)
-y_train = np.array(measurements[:, 0])
+y_train = np.array(car_control_measurements)
 
-# model = Sequential()
-# model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
-# model.add(Flatten())
-# model.add(Dense(1))
-
-model = MiniVGGNet.build(1)
+# model = LeNet.build(car_control_measurements.shape[1])
+model = LeNet.build(1)
 
 model.compile(loss='mse', optimizer='adam')
-model.fit(X_train, y_train, validation_split=0.2, shuffle=True, batch_size=batch_size, epochs=epochs)
 
-model.save('output/model.h5')
+H = model.fit(X_train, y_train,
+              validation_split=0.2,
+              shuffle=True,
+              batch_size=batch_size,
+              epochs=epochs,
+              callbacks=get_callbacks())
+
+#plot_and_save_train_history(H)
