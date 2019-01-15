@@ -6,7 +6,7 @@ import shutil
 
 import numpy as np
 import socketio
-# import eventlet
+import eventlet
 import eventlet.wsgi
 from PIL import Image
 from flask import Flask
@@ -15,6 +15,7 @@ from io import BytesIO
 from keras.models import load_model
 import h5py
 from keras import __version__ as keras_version
+from scipy import ndimage
 
 sio = socketio.Server()
 app = Flask(__name__)
@@ -131,6 +132,11 @@ if __name__ == '__main__':
         print("RECORDING THIS RUN ...")
     else:
         print("NOT RECORDING THIS RUN ...")
+
+    # workaround to prevent CUDA error
+    image = ndimage.imread('../sample_driving_data/IMG/center_2016_12_01_13_30_48_287.jpg')
+    steering_angle = float(model.predict(np.array([image]), batch_size=1))
+    print(steering_angle)
 
     # wrap Flask application with engineio's middleware
     app = socketio.Middleware(sio, app)

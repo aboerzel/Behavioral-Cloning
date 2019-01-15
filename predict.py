@@ -30,6 +30,6 @@ for line in lines:
 
 model = load_model('output/model.h5')
 
-pre = model.predict(np.array([images[0]]), batch_size=1)
+steering_angle = float(model.predict(np.array([images[0]]), batch_size=1))
 
-print(pre)
+print(steering_angle)
