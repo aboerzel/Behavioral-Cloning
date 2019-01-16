@@ -1,127 +1,131 @@
 import csv
 import os
 import argparse
+from enum import Enum
+
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 
 from keras.models import Sequential
-from keras.layers import Flatten, Dense, Lambda, Activation, BatchNormalization, Dropout, MaxPooling2D, Conv2D
+from keras.layers import Flatten, Dense, Lambda, Activation, BatchNormalization, Dropout, MaxPooling2D, Conv2D, \
+    Cropping2D
 from scipy import ndimage
+from sklearn.model_selection import train_test_split
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-m", "--model", default='./output/model.h5', help="model file")
-# ap.add_argument("-v", "--video", help="input video")
+ap.add_argument("-d", "--data", default='../sample_driving_data', help="data folder")
 args = vars(ap.parse_args())
 
-data_folder = '../sample_driving_data'
+data_folder = args['data']
 driving_log = 'driving_log.csv'
 
-lines = []
-with open(os.path.join(data_folder, driving_log)) as csvfile:
-    reader = csv.reader(csvfile)
-    next(reader, None)  # skip the headers
-    for line in reader:
-        lines.append(line)
 
-# print(lines)
-
-images = []
-car_control_measurements = []
-for line in lines:
-    filename = line[0].split('/')[-1]
-    current_path = os.path.join(data_folder, "IMG", filename)
-    image = ndimage.imread(current_path)
-    images.append(image)
-    # car_control_measurements.append([float(line[3]), float(line[5]), float(line[6])])
-    #car_control_measurements.append([float(line[3])])
-    car_control_measurements.append(float(line[3]))
-
-car_control_measurements = np.array(car_control_measurements)
+def read_samples_from_file(driving_log_filepath):
+    images = []
+    measurements = []
+    with open(driving_log_filepath) as csvfile:
+        reader = csv.reader(csvfile)
+        next(reader, None)  # skip the headers
+        for line in reader:
+            images.append([line[0].split('/')[-1], line[1].split('/')[-1], line[2].split('/')[-1]])
+            measurements.append(float(line[3]))
+    return images, measurements
 
 
-# print(measurements)
-
-class LeNet:
+class Preprocessing:
     @staticmethod
-    def build(num_outputs):
+    def build():
         model = Sequential()
-
         model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
-
-        # Layer 1
-        # Conv Layer 1 => 28x28x6
-        model.add(Conv2D(filters=6, kernel_size=5, strides=1, activation='relu', input_shape=(32, 32, 3)))
-
-        # Layer 2
-        # Pooling Layer 1 => 14x14x6
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-
-        # Layer 3
-        # Conv Layer 2 => 10x10x16
-        model.add(Conv2D(filters=16, kernel_size=5, strides=1, activation='relu', input_shape=(14, 14, 6)))
-
-        # Layer 4
-        # Pooling Layer 2 => 5x5x16
-        model.add(MaxPooling2D(pool_size=2, strides=2))
-
-        # Flatten
-        model.add(Flatten())
-
-        # Layer 5
-        # Fully connected layer 1 => 120x1
-        model.add(Dense(units=120, activation='relu'))
-
-        model.add(Dropout(0.5))
-
-        # Layer 6
-        # Fully connected layer 2 => 84x1
-        model.add(Dense(units=84, activation='relu'))
-
-        model.add(Dropout(0.5))
-
-        # Output Layer => num_classes x 1
-        model.add(Dense(units=num_outputs))
-
-        # show and return the constructed network architecture
-        model.summary()
+        model.add(Cropping2D(cropping=((50, 20), (0, 0))))
         return model
 
 
-def get_callbacks():
+class LeNet:
+    @staticmethod
+    def build(model):
+        model.add(Conv2D(filters=6, kernel_size=5, strides=1, activation='relu', input_shape=(32, 32, 3)))
+        model.add(MaxPooling2D(pool_size=(2, 2)))
+        model.add(Conv2D(filters=16, kernel_size=5, strides=1, activation='relu', input_shape=(14, 14, 6)))
+        model.add(MaxPooling2D(pool_size=2, strides=2))
+        model.add(Flatten())
+        model.add(Dense(units=120, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(units=84, activation='relu'))
+        model.add(Dropout(0.5))
+        model.add(Dense(units=1))
+        return model
+
+
+class Nvidia:
+    @staticmethod
+    def build(model):
+        model.add(Conv2D(24, (5, 5), activation='elu', strides=(2, 2)))
+        model.add(Conv2D(36, (5, 5), activation='elu', strides=(2, 2)))
+        model.add(Conv2D(48, (5, 5), activation='elu', strides=(2, 2)))
+        model.add(Conv2D(64, (3, 3), activation='elu'))
+        model.add(Conv2D(64, (3, 3), activation='elu'))
+        model.add(Dropout(0.5))
+        model.add(Flatten())
+        model.add(Dense(100, activation='elu'))
+        model.add(Dense(50, activation='elu'))
+        model.add(Dense(10, activation='elu'))
+        model.add(Dense(1))
+        return model
+
+
+class ModelArchitecture(Enum):
+    LeNet = 1
+    NVidia = 2
+
+
+def get_model(model_architecture):
+    model = {
+        ModelArchitecture.LeNet: LeNet.build(Preprocessing.build()),
+        ModelArchitecture.NVidia: Nvidia.build(Preprocessing.build()),
+    }[model_architecture]
+    print('{} - Model'.format(model_architecture.name))
+    model.summary()
+    return model
+
+
+def get_callbacks(model_architecture):
+    model_filepath = './output/{}_model.h5'.format(model_architecture)
     callbacks = [
-        TensorBoard(log_dir="logs/{}".format('Behavioral-Cloning')),
+        TensorBoard(log_dir="logs/{}".format(model_architecture)),
         EarlyStopping(monitor='loss', min_delta=0, patience=5, mode='auto', verbose=1),
-        ModelCheckpoint(args['model'], save_best_only=False, verbose=1),
+        ModelCheckpoint(model_filepath, save_best_only=False, verbose=1),
         ReduceLROnPlateau(monitor='loss', factor=0.1, patience=2, verbose=1, mode='auto', epsilon=1e-4, cooldown=0,
                           min_lr=0)]
     return callbacks
 
 
-def plot_and_save_train_history(H):
+def plot_and_save_train_history(H, model_architecture):
     plt.style.use("ggplot")
     plt.figure()
     plt.plot(np.arange(0, len(H.history["loss"])), H.history["loss"], label="train_loss")
     plt.plot(np.arange(0, len(H.history["val_loss"])), H.history["val_loss"], label="val_loss")
-    plt.plot(np.arange(0, len(H.history["acc"])), H.history["acc"], label="train_acc")
-    plt.plot(np.arange(0, len(H.history["val_acc"])), H.history["val_acc"], label="val_acc")
-    plt.title("Training Loss and Accuracy")
+    plt.title("Mean Squared Error Loss")
     plt.xlabel("Epoch #")
-    plt.ylabel("Loss/Accuracy")
-    plt.legend()
-    plt.savefig('./output/training-loss-and-accuracy.png')
+    plt.ylabel("Mean squared error loss")
+    plt.legend(['Training Set', 'Validation Set'], loc='upper right')
+    plt.savefig('./output/training-history_{}.png'.format(model_architecture))
     plt.show()
 
 
+X, y = read_samples_from_file(os.path.join(data_folder, driving_log))
+
+X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=0)
+
+# os.path.join(data_folder, "IMG", line[0].split('/')[-1]),
+
 # trainig hyperparameter
 batch_size = 128
-epochs = 1000
+epochs = 1
+model_architecture = ModelArchitecture.NVidia
 
-X_train = np.array(images)
-y_train = np.array(car_control_measurements)
-
-# model = LeNet.build(car_control_measurements.shape[1])
-model = LeNet.build(1)
+model = get_model(model_architecture)
 
 model.compile(loss='mse', optimizer='adam')
 
@@ -130,6 +134,6 @@ H = model.fit(X_train, y_train,
               shuffle=True,
               batch_size=batch_size,
               epochs=epochs,
-              callbacks=get_callbacks())
+              callbacks=get_callbacks(model_architecture.name))
 
-#plot_and_save_train_history(H)
+plot_and_save_train_history(H, model_architecture.name)
