@@ -95,7 +95,7 @@ def get_callbacks(model_architecture):
     callbacks = [
         TensorBoard(log_dir="logs/{}".format(model_architecture)),
         EarlyStopping(monitor='loss', min_delta=0, patience=5, mode='auto', verbose=1),
-        ModelCheckpoint(model_filepath, save_best_only=False, verbose=1),
+        ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
         ReduceLROnPlateau(monitor='loss', factor=0.1, patience=2, verbose=1, mode='auto', epsilon=1e-4, cooldown=0,
                           min_lr=0)]
     return callbacks
