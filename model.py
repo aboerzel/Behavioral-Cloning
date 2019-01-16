@@ -44,35 +44,35 @@ class Preprocessing:
 
 class LeNet:
     @staticmethod
-    def build(model):
-        model.add(Conv2D(filters=6, kernel_size=5, strides=1, activation='relu', input_shape=(32, 32, 3)))
-        model.add(MaxPooling2D(pool_size=(2, 2)))
-        model.add(Conv2D(filters=16, kernel_size=5, strides=1, activation='relu', input_shape=(14, 14, 6)))
-        model.add(MaxPooling2D(pool_size=2, strides=2))
-        model.add(Flatten())
-        model.add(Dense(units=120, activation='relu'))
-        model.add(Dropout(0.5))
-        model.add(Dense(units=84, activation='relu'))
-        model.add(Dropout(0.5))
-        model.add(Dense(units=1))
-        return model
+    def build(base_model):
+        base_model.add(Conv2D(filters=6, kernel_size=5, strides=1, activation='relu', input_shape=(32, 32, 3)))
+        base_model.add(MaxPooling2D(pool_size=(2, 2)))
+        base_model.add(Conv2D(filters=16, kernel_size=5, strides=1, activation='relu', input_shape=(14, 14, 6)))
+        base_model.add(MaxPooling2D(pool_size=2, strides=2))
+        base_model.add(Flatten())
+        base_model.add(Dense(units=120, activation='relu'))
+        base_model.add(Dropout(0.5))
+        base_model.add(Dense(units=84, activation='relu'))
+        base_model.add(Dropout(0.5))
+        base_model.add(Dense(units=1))
+        return base_model
 
 
 class Nvidia:
     @staticmethod
-    def build(model):
-        model.add(Conv2D(24, (5, 5), activation='elu', strides=(2, 2)))
-        model.add(Conv2D(36, (5, 5), activation='elu', strides=(2, 2)))
-        model.add(Conv2D(48, (5, 5), activation='elu', strides=(2, 2)))
-        model.add(Conv2D(64, (3, 3), activation='elu'))
-        model.add(Conv2D(64, (3, 3), activation='elu'))
-        model.add(Dropout(0.5))
-        model.add(Flatten())
-        model.add(Dense(100, activation='elu'))
-        model.add(Dense(50, activation='elu'))
-        model.add(Dense(10, activation='elu'))
-        model.add(Dense(1))
-        return model
+    def build(base_model):
+        base_model.add(Conv2D(24, (5, 5), activation='elu', strides=(2, 2)))
+        base_model.add(Conv2D(36, (5, 5), activation='elu', strides=(2, 2)))
+        base_model.add(Conv2D(48, (5, 5), activation='elu', strides=(2, 2)))
+        base_model.add(Conv2D(64, (3, 3), activation='elu'))
+        base_model.add(Conv2D(64, (3, 3), activation='elu'))
+        base_model.add(Dropout(0.5))
+        base_model.add(Flatten())
+        base_model.add(Dense(100, activation='elu'))
+        base_model.add(Dense(50, activation='elu'))
+        base_model.add(Dense(10, activation='elu'))
+        base_model.add(Dense(1))
+        return base_model
 
 
 class ModelArchitecture(Enum):
