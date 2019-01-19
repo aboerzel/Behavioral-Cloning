@@ -16,7 +16,6 @@ from dataset_generator import DatasetGenerator
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--datapath", default=config.DATASET_ROOT_PATH, help="sample driving data path")
-ap.add_argument("-s", "--dataset", default=config.HDF5_DATASET_FILENAME, help="hdf5 dataset filename")
 ap.add_argument('-l', "--learning_rate", default=config.LEARNING_RATE, type=float, help='learning rate')
 args = vars(ap.parse_args())
 
