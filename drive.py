@@ -133,7 +133,8 @@ if __name__ == '__main__':
     else:
         print("NOT RECORDING THIS RUN ...")
 
-    # workaround to prevent CUDA error
+    # On my computer, error CUDA_XXX occurs when the first telemetry call occurs.
+    # I was able to prevent the error by making a predictive call on the model once before the telemetry call.
     image = ndimage.imread('../sample_driving_data/IMG/center_2016_12_01_13_30_48_287.jpg')
     steering_angle = float(model.predict(np.array([image]), batch_size=1))
     print(steering_angle)
