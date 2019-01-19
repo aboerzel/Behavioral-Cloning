@@ -38,6 +38,9 @@ class DatasetGenerator:
     def read_image(self, filename):
         return cv2.imread(os.path.join(self.image_path, filename), cv2.COLOR_BGR2RGB)
 
+    def flip_horizontal(self, image):
+        return cv2.flip(image, 1)
+
     def generator(self, passes=np.inf):
         # initialize the epoch count
         epochs = 0
@@ -54,14 +57,22 @@ class DatasetGenerator:
                 if speed < 0.1:
                     continue
 
-                images.append(self.read_image(center))
+                # center image
+                center_image = self.read_image(center)
+                images.append(center_image)
                 steerings.append(steering)
 
+                # left image
                 images.append(self.read_image(left))
                 steerings.append(steering + self.steering_correction)
 
+                # right image
                 images.append(self.read_image(right))
                 steerings.append(steering - self.steering_correction)
+
+                # flipped center image
+                images.append(self.flip_horizontal(center_image))
+                steerings.append(-steering)
 
             yield shuffle(np.array(images), np.array(steerings))
 
