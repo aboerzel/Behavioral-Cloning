@@ -67,12 +67,12 @@ class Nvidia:
         base_model.add(Dense(50))
         base_model.add(BatchNormalization())
         base_model.add(Activation('relu'))
-        base_model.add(Dropout(0.5))
+        base_model.add(Dropout(0.25))
 
         base_model.add(Dense(10))
         base_model.add(BatchNormalization())
         base_model.add(Activation('relu'))
-        base_model.add(Dropout(0.5))
+        base_model.add(Dropout(0.25))
 
         base_model.add(Dense(1))
         return base_model
