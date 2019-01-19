@@ -110,10 +110,10 @@ model.summary()
 
 model.compile(loss='mse', optimizer='adam')
 
-trainGen = DatasetGenerator(X_train, X_valid, config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH,
+trainGen = DatasetGenerator(X_train, y_train, config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH,
                             config.BATCH_SIZE)
 
-valGen = DatasetGenerator(X_train, X_valid, config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH,
+valGen = DatasetGenerator(X_valid, y_valid, config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH,
                           config.BATCH_SIZE)
 
 print("[INFO] train model...")
