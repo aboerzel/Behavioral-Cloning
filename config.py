@@ -13,6 +13,7 @@ IMAGE_DEPTH = 3
 BATCH_SIZE = 128
 NUM_EPOCHS = 50
 LEARNING_RATE = 1.0e-4
+STEERING_CORRECTION = 0.2
 
 # define the filename of HDF5 file
 HDF5_DATASET_FILENAME = "driving_dataset.h5"
