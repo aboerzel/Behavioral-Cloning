@@ -8,6 +8,7 @@ from keras.layers import Flatten, Dense, Lambda, Dropout, MaxPooling2D, Conv2D, 
 from keras.models import Sequential
 from sklearn.model_selection import train_test_split
 from hdf5datasetloader import Hdf5DatasetLoader
+from dataset_generator import DatasetGenerator
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--datapath", default=config.DATASET_ROOT_PATH, help="sample driving data path")
@@ -109,12 +110,18 @@ model.summary()
 
 model.compile(loss='mse', optimizer='adam')
 
+trainGen = DatasetGenerator(X_train, X_valid, config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH,
+                            config.BATCH_SIZE)
+
+valGen = DatasetGenerator(X_train, X_valid, config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH,
+                          config.BATCH_SIZE)
+
 print("[INFO] train model...")
-H = model.fit(X_train, y_train,
-              validation_split=0.2,
-              shuffle=True,
-              batch_size=config.BATCH_SIZE,
-              epochs=config.NUM_EPOCHS,
-              callbacks=get_callbacks(model_architecture))
+H = model.fit_generator(trainGen.generator(),
+                        steps_per_epoch=trainGen.numImages // config.BATCH_SIZE,
+                        validation_data=valGen.generator(),
+                        validation_steps=valGen.numImages // config.BATCH_SIZE,
+                        epochs=config.NUM_EPOCHS,
+                        callbacks=get_callbacks(model_architecture))
 
 plot_and_save_train_history(H, model_architecture)
