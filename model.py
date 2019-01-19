@@ -1,44 +1,32 @@
-import csv
-import os
 import argparse
-from enum import Enum
-
-import numpy as np
+import os
+import config
 import matplotlib.pyplot as plt
+import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
-
+from keras.layers import Flatten, Dense, Lambda, Dropout, MaxPooling2D, Conv2D, Cropping2D
 from keras.models import Sequential
-from keras.layers import Flatten, Dense, Lambda, Activation, BatchNormalization, Dropout, MaxPooling2D, Conv2D, \
-    Cropping2D
-from scipy import ndimage
 from sklearn.model_selection import train_test_split
+from hdf5datasetloader import Hdf5DatasetLoader
 
 ap = argparse.ArgumentParser()
-ap.add_argument("-d", "--data", default='../sample_driving_data', help="data folder")
+ap.add_argument("-p", "--datapath", default=config.DATASET_ROOT_PATH, help="sample driving data path")
+ap.add_argument("-s", "--dataset", default=config.HDF5_DATASET_FILENAME, help="hdf5 dataset filename")
+ap.add_argument("-a", "--architecture", default=config.MODEL_ARCHITECTURE, help="model architecture")
 args = vars(ap.parse_args())
 
-data_folder = args['data']
-driving_log = 'driving_log.csv'
+data_folder = args['datapath']
+dataset_filepath = os.path.sep.join([data_folder, 'hdf5', args['dataset']])
 
-
-def read_samples_from_file(driving_log_filepath):
-    images = []
-    measurements = []
-    with open(driving_log_filepath) as csvfile:
-        reader = csv.reader(csvfile)
-        next(reader, None)  # skip the headers
-        for line in reader:
-            images.append([line[0].split('/')[-1], line[1].split('/')[-1], line[2].split('/')[-1]])
-            measurements.append(float(line[3]))
-    return images, measurements
+IMAGE_SHAPE = (config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH)
 
 
 class Preprocessing:
     @staticmethod
-    def build():
+    def build(input_shape):
         model = Sequential()
-        model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=(160, 320, 3)))
-        model.add(Cropping2D(cropping=((50, 20), (0, 0))))
+        model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=input_shape))
+        model.add(Cropping2D(cropping=((50, 20), (0, 0))))  # remove the sky and the car front
         return model
 
 
@@ -75,23 +63,16 @@ class Nvidia:
         return base_model
 
 
-class ModelArchitecture(Enum):
-    LeNet = 1
-    NVidia = 2
-
-
 def get_model(model_architecture):
-    model = {
-        ModelArchitecture.LeNet: LeNet.build(Preprocessing.build()),
-        ModelArchitecture.NVidia: Nvidia.build(Preprocessing.build()),
-    }[model_architecture]
-    print('{} - Model'.format(model_architecture.name))
-    model.summary()
-    return model
+    if model_architecture == "lenet":
+        return LeNet.build(Preprocessing.build(IMAGE_SHAPE))
+
+    if model_architecture == "nvidia":
+        return Nvidia.build(Preprocessing.build(IMAGE_SHAPE))
 
 
 def get_callbacks(model_architecture):
-    model_filepath = './output/{}_model.h5'.format(model_architecture)
+    model_filepath = './{}/{}_model.h5'.format(config.OUTPUT_PATH, model_architecture)
     callbacks = [
         TensorBoard(log_dir="logs/{}".format(model_architecture)),
         EarlyStopping(monitor='loss', min_delta=0, patience=5, mode='auto', verbose=1),
@@ -110,30 +91,30 @@ def plot_and_save_train_history(H, model_architecture):
     plt.xlabel("Epoch #")
     plt.ylabel("Mean squared error loss")
     plt.legend(['Training Set', 'Validation Set'], loc='upper right')
-    plt.savefig('./output/training-history_{}.png'.format(model_architecture))
+    plt.savefig('./{}/training-history_{}.png'.format(config.OUTPUT_PATH, model_architecture))
     plt.show()
 
 
-X, y = read_samples_from_file(os.path.join(data_folder, driving_log))
+print("[INFO] loading data...")
+loader = Hdf5DatasetLoader()
+images, measurements = loader.load(dataset_filepath)
 
-X_train, X_valid, y_train, y_valid = train_test_split(X, y, test_size=0.2, random_state=0)
+X_train, X_valid, y_train, y_valid = train_test_split(images, measurements, test_size=0.2, random_state=0)
 
-# os.path.join(data_folder, "IMG", line[0].split('/')[-1]),
-
-# trainig hyperparameter
-batch_size = 128
-epochs = 1
-model_architecture = ModelArchitecture.NVidia
-
+print("[INFO] create model...")
+model_architecture = args['architecture']
 model = get_model(model_architecture)
+print('model architecture: {}'.format(model_architecture))
+model.summary()
 
 model.compile(loss='mse', optimizer='adam')
 
+print("[INFO] train model...")
 H = model.fit(X_train, y_train,
               validation_split=0.2,
               shuffle=True,
-              batch_size=batch_size,
-              epochs=epochs,
-              callbacks=get_callbacks(model_architecture.name))
+              batch_size=config.BATCH_SIZE,
+              epochs=config.NUM_EPOCHS,
+              callbacks=get_callbacks(model_architecture))
 
-plot_and_save_train_history(H, model_architecture.name)
+plot_and_save_train_history(H, model_architecture)
