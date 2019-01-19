@@ -1,4 +1,6 @@
 import random
+
+import cv2
 import numpy as np
 
 
@@ -41,9 +43,10 @@ class DatasetGenerator:
 
             x_data, y_data = self.next_batch()
 
-            for i, ((center, left, right), (steering, throttle, brake, speed)) in enumerate(zip(x_data, y_data)):
-                # image = self.augmentor.generate_plate_image(image)
-                images[i] = center
+            for i, (image, (steering, throttle, brake, speed)) in enumerate(zip(x_data, y_data)):
+                # convert to YUV color space (as nVidia paper suggests)
+                #images[i] = cv2.cvtColor(center, cv2.COLOR_BGR2YUV)
+                images[i] = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                 steerings[i] = steering
 
             yield (images, steerings)

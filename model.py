@@ -1,19 +1,23 @@
 import argparse
 import os
-import config
+
+import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
-from keras.layers import Flatten, Dense, Lambda, Dropout, MaxPooling2D, Conv2D, Cropping2D
+from keras.layers import Flatten, Dense, Lambda, Dropout, Conv2D, Cropping2D
 from keras.models import Sequential
+from keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
-from hdf5datasetloader import Hdf5DatasetLoader
+
+import config
 from dataset_generator import DatasetGenerator
+from hdf5datasetloader import Hdf5DatasetLoader
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--datapath", default=config.DATASET_ROOT_PATH, help="sample driving data path")
 ap.add_argument("-s", "--dataset", default=config.HDF5_DATASET_FILENAME, help="hdf5 dataset filename")
-ap.add_argument("-a", "--architecture", default=config.MODEL_ARCHITECTURE, help="model architecture")
+ap.add_argument('-l', "--learning_rate", default=config.LEARNING_RATE, type=float, help='learning rate')
 args = vars(ap.parse_args())
 
 data_folder = args['datapath']
@@ -29,22 +33,6 @@ class Preprocessing:
         model.add(Lambda(lambda x: x / 255.0 - 0.5, input_shape=input_shape))
         model.add(Cropping2D(cropping=((50, 20), (0, 0))))  # remove the sky and the car front
         return model
-
-
-class LeNet:
-    @staticmethod
-    def build(base_model):
-        base_model.add(Conv2D(filters=6, kernel_size=5, strides=1, activation='relu', input_shape=(32, 32, 3)))
-        base_model.add(MaxPooling2D(pool_size=(2, 2)))
-        base_model.add(Conv2D(filters=16, kernel_size=5, strides=1, activation='relu', input_shape=(14, 14, 6)))
-        base_model.add(MaxPooling2D(pool_size=2, strides=2))
-        base_model.add(Flatten())
-        base_model.add(Dense(units=120, activation='relu'))
-        base_model.add(Dropout(0.5))
-        base_model.add(Dense(units=84, activation='relu'))
-        base_model.add(Dropout(0.5))
-        base_model.add(Dense(units=1))
-        return base_model
 
 
 class Nvidia:
@@ -64,18 +52,10 @@ class Nvidia:
         return base_model
 
 
-def get_model(model_architecture):
-    if model_architecture == "lenet":
-        return LeNet.build(Preprocessing.build(IMAGE_SHAPE))
-
-    if model_architecture == "nvidia":
-        return Nvidia.build(Preprocessing.build(IMAGE_SHAPE))
-
-
-def get_callbacks(model_architecture):
-    model_filepath = './{}/{}_model.h5'.format(config.OUTPUT_PATH, model_architecture)
+def get_callbacks():
+    model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
-        TensorBoard(log_dir="logs/{}".format(model_architecture)),
+        TensorBoard(log_dir="logs".format()),
         EarlyStopping(monitor='loss', min_delta=0, patience=5, mode='auto', verbose=1),
         ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
         ReduceLROnPlateau(monitor='loss', factor=0.1, patience=2, verbose=1, mode='auto', epsilon=1e-4, cooldown=0,
@@ -83,7 +63,7 @@ def get_callbacks(model_architecture):
     return callbacks
 
 
-def plot_and_save_train_history(H, model_architecture):
+def plot_and_save_train_history(H):
     plt.style.use("ggplot")
     plt.figure()
     plt.plot(np.arange(0, len(H.history["loss"])), H.history["loss"], label="train_loss")
@@ -92,23 +72,42 @@ def plot_and_save_train_history(H, model_architecture):
     plt.xlabel("Epoch #")
     plt.ylabel("Mean squared error loss")
     plt.legend(['Training Set', 'Validation Set'], loc='upper right')
-    plt.savefig('./{}/training-history_{}.png'.format(config.OUTPUT_PATH, model_architecture))
+    plt.savefig('./{}/training-history.png'.format(config.OUTPUT_PATH))
     plt.show()
+    cv2.waitKey(0)
+
+
+def combine_images(images, measurements, correction):
+    new_images = []
+    new_images.extend(images[:, 0])  # center
+    new_images.extend(images[:, 1])  # left
+    new_images.extend(images[:, 2])  # right
+
+    steering = measurements[:, 0]
+    throttle = measurements[:, 1]
+    brake = measurements[:, 2]
+    speed = measurements[:, 3]
+
+    new_measurements = []
+    new_measurements.extend(measurements)
+    new_measurements.extend(np.array([[x + correction for x in steering], throttle, brake, speed]).T)
+    new_measurements.extend(np.array([[x - correction for x in steering], throttle, brake, speed]).T)
+
+    return np.array(new_images), np.array(new_measurements)
 
 
 print("[INFO] loading data...")
 loader = Hdf5DatasetLoader()
 images, measurements = loader.load(dataset_filepath)
+images, measurements = combine_images(images, measurements, 0.2)
 
-X_train, X_valid, y_train, y_valid = train_test_split(images, measurements, test_size=0.2, random_state=0)
+X_train, X_valid, y_train, y_valid = train_test_split(images, measurements, test_size=0.20)
 
 print("[INFO] create model...")
-model_architecture = args['architecture']
-model = get_model(model_architecture)
-print('model architecture: {}'.format(model_architecture))
+model = Nvidia.build(Preprocessing.build(IMAGE_SHAPE))
 model.summary()
 
-model.compile(loss='mse', optimizer='adam')
+model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
 
 trainGen = DatasetGenerator(X_train, y_train, config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH,
                             config.BATCH_SIZE)
@@ -122,6 +121,6 @@ H = model.fit_generator(trainGen.generator(),
                         validation_data=valGen.generator(),
                         validation_steps=valGen.numImages // config.BATCH_SIZE,
                         epochs=config.NUM_EPOCHS,
-                        callbacks=get_callbacks(model_architecture))
+                        callbacks=get_callbacks())
 
-plot_and_save_train_history(H, model_architecture)
+plot_and_save_train_history(H)
