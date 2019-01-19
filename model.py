@@ -28,7 +28,8 @@ class Preprocessing:
     @staticmethod
     def build(input_shape):
         model = Sequential()
-        model.add(Lambda(lambda x: (x / 127.5) - 1., input_shape=input_shape))
+        # model.add(Lambda(lambda x: (x / 127.5) - 1., input_shape=input_shape))  # scale between -1 and +1
+        model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))  # normalize between -0.5 and +0.5
         model.add(Cropping2D(cropping=((50, 20), (0, 0))))  # remove the sky and the car front
         return model
 
@@ -56,20 +57,22 @@ class Nvidia:
         base_model.add(BatchNormalization())
         base_model.add(Activation('relu'))
 
-        base_model.add(Dropout(0.5))
         base_model.add(Flatten())
 
         base_model.add(Dense(100))
         base_model.add(BatchNormalization())
         base_model.add(Activation('relu'))
+        base_model.add(Dropout(0.5))
 
         base_model.add(Dense(50))
         base_model.add(BatchNormalization())
         base_model.add(Activation('relu'))
+        base_model.add(Dropout(0.5))
 
         base_model.add(Dense(10))
         base_model.add(BatchNormalization())
         base_model.add(Activation('relu'))
+        base_model.add(Dropout(0.5))
 
         base_model.add(Dense(1))
         return base_model
