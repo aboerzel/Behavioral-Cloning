@@ -2,6 +2,8 @@ from moviepy.editor import ImageSequenceClip
 import argparse
 import os
 
+import config
+
 IMAGE_EXT = ['jpeg', 'gif', 'png', 'jpg']
 
 
@@ -34,7 +36,7 @@ def main():
     clip = ImageSequenceClip(image_list, fps=args.fps)
     
     try:
-        clip.write_videofile(video_file_1)
+        clip.write_videofile(os.path.join(config.OUTPUT_PATH, video_file_1))
     except:
         clip.write_videofile(video_file_2)
 
