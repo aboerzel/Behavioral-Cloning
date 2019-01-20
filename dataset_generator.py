@@ -38,7 +38,8 @@ class DatasetGenerator:
     def read_image(self, filename):
         return cv2.imread(os.path.join(self.image_path, filename), cv2.COLOR_BGR2RGB)
 
-    def flip_horizontal(self, image):
+    @staticmethod
+    def flip_horizontal(image):
         return cv2.flip(image, 1)
 
     def generator(self, passes=np.inf):
@@ -52,9 +53,11 @@ class DatasetGenerator:
 
             x_data, y_data = self.next_batch()
 
-            for i, ((center, left, right), (steering, throttle, brake, speed)) in enumerate(zip(x_data, y_data)):
+            for i, (cam_images, (steering, throttle, brake, speed)) in enumerate(zip(x_data, y_data)):
+                (center, left, right) = cam_images
+
                 # skip it if ~0 speed - not representative of driving behavior
-                if speed < 0.1:
+                if abs(speed) < 0.1:
                     continue
 
                 # center image
@@ -70,9 +73,12 @@ class DatasetGenerator:
                 images.append(self.read_image(right))
                 steerings.append(steering - self.steering_correction)
 
-                # flipped center image
-                images.append(self.flip_horizontal(center_image))
-                steerings.append(-steering)
+                # add flipped images if the car is not driving straight
+                if abs(steering) > 0.1:
+                    for n in range(0, 3):
+                        image = images[n]
+                        images.append(self.flip_horizontal(image))
+                        steerings.append(-steering)
 
             yield shuffle(np.array(images), np.array(steerings))
 
