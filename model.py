@@ -17,6 +17,8 @@ from dataset_generator import DatasetGenerator
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--datapath", default=config.DATASET_ROOT_PATH, help="sample driving data path")
 ap.add_argument('-l', "--learning_rate", default=config.LEARNING_RATE, type=float, help='learning rate')
+ap.add_argument('-b', "--batch_size", default=config.BATCH_SIZE, type=int, help='batch size')
+ap.add_argument('-e', "--epochs", default=config.NUM_EPOCHS, type=int, help='max number of epochs')
 args = vars(ap.parse_args())
 
 data_folder = args['datapath']
@@ -101,6 +103,23 @@ def plot_and_save_train_history(H):
 
 print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG))
+
+# positive angle is turning from left -> right. negative is turning from right -> left
+left_ind = np.where(measurements[:, 0] < -0.15)[0]
+right_ind = np.where(measurements[:, 0] > 0.15)[0]
+straight_ind = np.delete(np.arange(0, len(measurements)), np.concatenate([right_ind, left_ind]))
+
+left_m = measurements[left_ind]
+left_i = image_names[left_ind][:, 1]
+
+right_m = measurements[right_ind]
+right_i = image_names[right_ind][:, 2]
+
+straight_m = measurements[straight_ind]
+straight_i = image_names[straight_ind][:, 0]
+
+length = len(left_m) + len(right_m) + len(straight_m)
+
 X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.20)
 
 print("[INFO] create model...")
@@ -110,17 +129,17 @@ model.summary()
 model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
 
 trainGen = DatasetGenerator(X_train, y_train, config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH,
-                            config.BATCH_SIZE, config.STEERING_CORRECTION, os.path.join(data_folder, 'IMG'))
+                            args['batch_size'], config.STEERING_CORRECTION, os.path.join(data_folder, 'IMG'))
 
 valGen = DatasetGenerator(X_valid, y_valid, config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH,
-                          config.BATCH_SIZE, config.STEERING_CORRECTION, os.path.join(data_folder, 'IMG'))
+                          args['batch_size'], config.STEERING_CORRECTION, os.path.join(data_folder, 'IMG'))
 
 print("[INFO] train model...")
 H = model.fit_generator(trainGen.generator(),
-                        steps_per_epoch=trainGen.numImages // config.BATCH_SIZE,
+                        steps_per_epoch=trainGen.numImages // args['batch_size'],
                         validation_data=valGen.generator(),
-                        validation_steps=valGen.numImages // config.BATCH_SIZE,
-                        epochs=config.NUM_EPOCHS,
+                        validation_steps=valGen.numImages // args['batch_size'],
+                        epochs=args['epochs'],
                         callbacks=get_callbacks())
 
 plot_and_save_train_history(H)

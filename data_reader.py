@@ -8,8 +8,22 @@ def read_samples_from_file(driving_log_filepath):
     measurements = []
     with open(driving_log_filepath) as csvfile:
         reader = csv.reader(csvfile)
-        next(reader, None)  # skip the headers
+        next(reader, None)  # skip headers
         for line in reader:
-            image_paths.append((line[0].split('/')[-1], line[1].split('/')[-1], line[2].split('/')[-1]))
-            measurements.append((float(line[3]), float(line[4]), float(line[5]), float(line[6])))
+            # camera images
+            center = line[0].split('/')[-1]
+            left = line[1].split('/')[-1]
+            right = line[2].split('/')[-1]
+
+            # measurements
+            steering = float(line[3])
+            throttle = float(line[4])
+            brake = float(line[5])
+            speed = float(line[6])
+
+            # skip if speed is 0 - not representative for driving behavior
+            if abs(speed) > 0:
+                image_paths.append((center, left, right))
+                measurements.append((steering, throttle, brake, speed))
+
     return np.array(image_paths), np.array(measurements)
