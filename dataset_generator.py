@@ -64,10 +64,10 @@ class DatasetGenerator:
                 steerings.append(steering)
 
                 images.append(self.read_image(left))
-                steerings.append(steering - steering_correction)
+                steerings.append(steering + steering_correction)
 
                 images.append(self.read_image(right))
-                steerings.append(steering + steering_correction)
+                steerings.append(steering - steering_correction)
 
                 # flip about each second image horizontal
                 if random() < .5:

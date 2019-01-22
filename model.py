@@ -40,39 +40,39 @@ class Nvidia:
     @staticmethod
     def build(base_model):
         base_model.add(Conv2D(24, (5, 5), strides=(2, 2)))
-        # base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(36, (5, 5), strides=(2, 2)))
-        # base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
-        # base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(64, (3, 3)))
-        # base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(64, (3, 3)))
-        # base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
-        # base_model.add(Dropout(0.5))
+        base_model.add(Dropout(0.5))
 
         base_model.add(Flatten())
 
         base_model.add(Dense(100))
-        # base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dense(50))
-        # base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dense(10))
-        # ase_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dense(1))
