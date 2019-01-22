@@ -1,5 +1,6 @@
 import argparse
 import os
+import random
 
 import cv2
 import matplotlib.pyplot as plt
@@ -104,23 +105,47 @@ def plot_and_save_train_history(H):
 print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG))
 
-# positive angle is turning from left -> right. negative is turning from right -> left
-left_ind = np.where(measurements[:, 0] < -0.15)[0]
-right_ind = np.where(measurements[:, 0] > 0.15)[0]
-straight_ind = np.delete(np.arange(0, len(measurements)), np.concatenate([right_ind, left_ind]))
+# positive angle is turning from left to right, negative is turning from right to left
+steering_threashold = 0.15
+# samples drifting to the left
+left_inds = np.where(measurements[:, 0] < -steering_threashold)[0]
+# samples drifting to the right
+right_inds = np.where(measurements[:, 0] > steering_threashold)[0]
+# samples driving straight ahead
+straight_ind = np.delete(np.arange(0, len(measurements)), np.concatenate([right_inds, left_inds]))
 
-left_m = measurements[left_ind]
-left_i = image_names[left_ind][:, 1]
+left_measurements = measurements[left_inds].tolist()
+left_images = image_names[left_inds][:, 1].tolist()
 
-right_m = measurements[right_ind]
-right_i = image_names[right_ind][:, 2]
+right_measurements = measurements[right_inds].tolist()
+right_images = image_names[right_inds][:, 2].tolist()
 
-straight_m = measurements[straight_ind]
-straight_i = image_names[straight_ind][:, 0]
+straight_measurements = measurements[straight_ind].tolist()
+straight_images = image_names[straight_ind][:, 0].tolist()
 
-length = len(left_m) + len(right_m) + len(straight_m)
+size = len(straight_measurements)
 
-X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.20)
+steering_correction = 0.25
+
+left_inds = np.arange(0, len(left_measurements))
+for i in range(size - len(left_measurements)):
+    n = random.choice(left_inds)
+    left_measurements[n][0] -= steering_correction
+    left_measurements.append(left_measurements[n])
+    left_images.append(left_images[n])
+
+right_inds = np.arange(0, len(right_measurements))
+for i in range(size - len(right_measurements)):
+    n = random.choice(right_inds)
+    right_measurements[n][0] += steering_correction
+    right_measurements.append(right_measurements[n])
+    right_images.append(right_images[n])
+
+images = straight_images + left_images + right_images
+measurements = straight_measurements + left_measurements + right_measurements
+
+# split into train and validation data
+X_train, X_valid, y_train, y_valid = train_test_split(images, measurements, test_size=0.20, shuffle=True)
 
 print("[INFO] create model...")
 model = Nvidia.build(Preprocessing.build(IMAGE_SHAPE))

@@ -1,4 +1,5 @@
 import os
+from random import random
 
 import cv2
 import numpy as np
@@ -9,8 +10,8 @@ class DatasetGenerator:
     def __init__(self, images, measurements, image_height, image_width, image_depth, batch_size, steering_correction,
                  image_path):
 
-        self.images = images
-        self.measurements = measurements
+        self.images = np.array(images)
+        self.measurements = np.array(measurements)
 
         self.image_height = image_height
         self.image_width = image_width
@@ -19,7 +20,7 @@ class DatasetGenerator:
         self.steering_correction = steering_correction
         self.image_path = image_path
 
-        self.numImages = self.measurements.shape[0]
+        self.numImages = len(self.images)
         self.indexes = np.asarray(range(self.numImages))
         shuffle(self.indexes)
         self.batch_index = 0
@@ -53,32 +54,17 @@ class DatasetGenerator:
 
             x_data, y_data = self.next_batch()
 
-            for i, (cam_images, (steering, throttle, brake, speed)) in enumerate(zip(x_data, y_data)):
-                (center, left, right) = cam_images
+            for image_path, (steering, throttle, brake, speed) in zip(x_data, y_data):
 
-                # skip it if ~0 speed - not representative of driving behavior
-                if abs(speed) < 0.1:
-                    continue
+                image = self.read_image(image_path)
 
-                # center image
-                center_image = self.read_image(center)
-                images.append(center_image)
-                steerings.append(steering)
-
-                # left image
-                images.append(self.read_image(left))
-                steerings.append(steering + self.steering_correction)
-
-                # right image
-                images.append(self.read_image(right))
-                steerings.append(steering - self.steering_correction)
-
-                # add flipped images if the car is not driving straight
-                if abs(steering) > 0.1:
-                    for n in range(0, 3):
-                        image = images[n]
-                        images.append(self.flip_horizontal(image))
-                        steerings.append(-steering)
+                # flip about each second image horizontal
+                if random() < .5:
+                    images.append(self.flip_horizontal(image))
+                    steerings.append(-steering)
+                else:
+                    images.append(image)
+                    steerings.append(steering)
 
             yield shuffle(np.array(images), np.array(steerings))
 
