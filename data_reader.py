@@ -26,4 +26,4 @@ def read_samples_from_file(driving_log_filepath):
                 image_paths.append((center, left, right))
                 measurements.append((steering, throttle, brake, speed))
 
-    return np.array(image_paths), np.array(measurements)
+    return image_paths, measurements

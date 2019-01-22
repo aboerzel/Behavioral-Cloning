@@ -6,7 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
-from keras.layers import Flatten, Dense, Lambda, Conv2D, Cropping2D, BatchNormalization, Activation
+from keras.layers import Flatten, Dense, Lambda, Conv2D, Cropping2D, BatchNormalization, Activation, Dropout
 from keras.models import Sequential
 from keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
@@ -40,37 +40,39 @@ class Nvidia:
     @staticmethod
     def build(base_model):
         base_model.add(Conv2D(24, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
+        # base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(36, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
+        # base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
+        # base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(64, (3, 3)))
-        base_model.add(BatchNormalization())
+        # base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(64, (3, 3)))
-        base_model.add(BatchNormalization())
+        # base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
+
+        # base_model.add(Dropout(0.5))
 
         base_model.add(Flatten())
 
         base_model.add(Dense(100))
-        base_model.add(BatchNormalization())
+        # base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dense(50))
-        base_model.add(BatchNormalization())
+        # base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dense(10))
-        base_model.add(BatchNormalization())
+        # ase_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dense(1))
@@ -105,47 +107,33 @@ def plot_and_save_train_history(H):
 print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG))
 
-# positive angle is turning from left to right, negative is turning from right to left
+# steering threshold for not driving straight ahead
 steering_threashold = 0.15
-# samples drifting to the left
-left_inds = np.where(measurements[:, 0] < -steering_threashold)[0]
-# samples drifting to the right
-right_inds = np.where(measurements[:, 0] > steering_threashold)[0]
+
+# samples turning from right to left (negative angle)
+left_inds = np.where(np.array(measurements)[:, 0] < -steering_threashold)[0]
+
+# samples turning from left to right (positive angle)
+right_inds = np.where(np.array(measurements)[:, 0] > steering_threashold)[0]
+
 # samples driving straight ahead
 straight_ind = np.delete(np.arange(0, len(measurements)), np.concatenate([right_inds, left_inds]))
 
-left_measurements = measurements[left_inds].tolist()
-left_images = image_names[left_inds][:, 1].tolist()
+size = len(straight_ind)
 
-right_measurements = measurements[right_inds].tolist()
-right_images = image_names[right_inds][:, 2].tolist()
-
-straight_measurements = measurements[straight_ind].tolist()
-straight_images = image_names[straight_ind][:, 0].tolist()
-
-size = len(straight_measurements)
-
-steering_correction = 0.25
-
-left_inds = np.arange(0, len(left_measurements))
-for i in range(size - len(left_measurements)):
+# pick random left-drifting samples
+for i in range(size - len(left_inds)):
     n = random.choice(left_inds)
-    left_measurements[n][0] -= steering_correction
-    left_measurements.append(left_measurements[n])
-    left_images.append(left_images[n])
+    image_names.append(image_names[n])
+    measurements.append(measurements[n])
 
-right_inds = np.arange(0, len(right_measurements))
-for i in range(size - len(right_measurements)):
+for i in range(size - len(right_inds)):
     n = random.choice(right_inds)
-    right_measurements[n][0] += steering_correction
-    right_measurements.append(right_measurements[n])
-    right_images.append(right_images[n])
-
-images = straight_images + left_images + right_images
-measurements = straight_measurements + left_measurements + right_measurements
+    image_names.append(image_names[n])
+    measurements.append(measurements[n])
 
 # split into train and validation data
-X_train, X_valid, y_train, y_valid = train_test_split(images, measurements, test_size=0.20, shuffle=True)
+X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.20, shuffle=True)
 
 print("[INFO] create model...")
 model = Nvidia.build(Preprocessing.build(IMAGE_SHAPE))
