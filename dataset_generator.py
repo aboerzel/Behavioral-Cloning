@@ -1,5 +1,5 @@
 import os
-from random import random
+from random import randint
 
 import cv2
 import numpy as np
@@ -47,9 +47,6 @@ class DatasetGenerator:
         # initialize the epoch count
         epochs = 0
 
-        # steering correction for left or right camera image
-        steering_correction = 0.20
-
         # keep looping infinitely -- the model will stop once we have reach the desired number of epochs
         while epochs < passes:
             images = []
@@ -57,22 +54,15 @@ class DatasetGenerator:
 
             x_data, y_data = self.next_batch()
 
-            for (center, left, right), (steering, throttle, brake, speed) in zip(x_data, y_data):
-
-                center_image = self.read_image(center)
-                images.append(center_image)
-                steerings.append(steering)
-
-                images.append(self.read_image(left))
-                steerings.append(steering + steering_correction)
-
-                images.append(self.read_image(right))
-                steerings.append(steering - steering_correction)
+            for image_name, (steering, throttle, brake, speed) in zip(x_data, y_data):
 
                 # flip about each second image horizontal
-                if random() < .5:
-                    images.append(self.flip_horizontal(center_image))
+                if randint(0, 1) == 1:
+                    images.append(self.flip_horizontal(self.read_image(image_name)))
                     steerings.append(-steering)
+                else:
+                    images.append(self.read_image(image_name))
+                    steerings.append(steering)
 
             yield shuffle(np.array(images), np.array(steerings))
 

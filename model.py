@@ -108,7 +108,7 @@ print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG))
 
 # steering threshold for not driving straight ahead
-steering_threashold = 0.15
+steering_threashold = 0.25
 
 # samples turning from right to left (negative angle)
 left_inds = np.where(np.array(measurements)[:, 0] < -steering_threashold)[0]
@@ -119,15 +119,16 @@ right_inds = np.where(np.array(measurements)[:, 0] > steering_threashold)[0]
 # samples driving straight ahead
 straight_ind = np.delete(np.arange(0, len(measurements)), np.concatenate([right_inds, left_inds]))
 
-size = len(straight_ind)
+num_straight_samples = len(straight_ind)
 
-# pick random left-drifting samples
-for i in range(size - len(left_inds)):
+# randomly select left-drifting samples and fill the left-drifting samples to the same number as the straight-samples
+for i in range(num_straight_samples - len(left_inds)):
     n = random.choice(left_inds)
     image_names.append(image_names[n])
     measurements.append(measurements[n])
 
-for i in range(size - len(right_inds)):
+# randomly select right-drifting samples and fill the right-drifting samples to the same number as the straight-samples
+for i in range(num_straight_samples - len(right_inds)):
     n = random.choice(right_inds)
     image_names.append(image_names[n])
     measurements.append(measurements[n])
