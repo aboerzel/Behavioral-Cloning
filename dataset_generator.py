@@ -7,17 +7,12 @@ from sklearn.utils import shuffle
 
 
 class DatasetGenerator:
-    def __init__(self, images, measurements, image_height, image_width, image_depth, batch_size, steering_correction,
-                 image_path):
+    def __init__(self, images, measurements, batch_size, image_path):
 
         self.images = np.array(images)
         self.measurements = np.array(measurements)
 
-        self.image_height = image_height
-        self.image_width = image_width
-        self.image_depth = image_depth
         self.batch_size = batch_size
-        self.steering_correction = steering_correction
         self.image_path = image_path
 
         self.numImages = len(self.images)
@@ -52,9 +47,9 @@ class DatasetGenerator:
             images = []
             steerings = []
 
-            x_data, y_data = self.next_batch()
+            image_names, measurements = self.next_batch()
 
-            for image_name, (steering, throttle, brake, speed) in zip(x_data, y_data):
+            for image_name, (steering, throttle, brake, speed) in zip(image_names, measurements):
 
                 # flip about each second image horizontal
                 if randint(0, 1) == 1:

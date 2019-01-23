@@ -1,7 +1,7 @@
 import csv
 
 
-def read_samples_from_file(driving_log_filepath, steering_correction=0.25):
+def read_samples_from_file(driving_log_filepath, steering_correction):
     image_paths = []
     measurements = []
     with open(driving_log_filepath) as csvfile:

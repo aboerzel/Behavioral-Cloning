@@ -16,4 +16,8 @@ IMAGE_DEPTH = 3
 BATCH_SIZE = 128
 NUM_EPOCHS = 150
 LEARNING_RATE = 1.0e-4
-STEERING_CORRECTION = 0.25
+
+# steering correction for left and right camera
+STEERING_CORRECTION = 0.20
+# steering threshold for not driving straight ahead
+STEERING_THREASHOLD = 0.25

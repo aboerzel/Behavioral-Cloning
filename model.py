@@ -105,16 +105,14 @@ def plot_and_save_train_history(H):
 
 
 print("[INFO] loading data...")
-image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG))
-
-# steering threshold for not driving straight ahead
-steering_threashold = 0.25
+image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
+                                                   config.STEERING_CORRECTION)
 
 # samples turning from right to left (negative angle)
-left_inds = np.where(np.array(measurements)[:, 0] < -steering_threashold)[0]
+left_inds = np.where(np.array(measurements)[:, 0] < -config.STEERING_THREASHOLD)[0]
 
 # samples turning from left to right (positive angle)
-right_inds = np.where(np.array(measurements)[:, 0] > steering_threashold)[0]
+right_inds = np.where(np.array(measurements)[:, 0] > config.STEERING_THREASHOLD)[0]
 
 # samples driving straight ahead
 straight_ind = np.delete(np.arange(0, len(measurements)), np.concatenate([right_inds, left_inds]))
@@ -142,11 +140,8 @@ model.summary()
 
 model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
 
-trainGen = DatasetGenerator(X_train, y_train, config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH,
-                            args['batch_size'], config.STEERING_CORRECTION, os.path.join(data_folder, 'IMG'))
-
-valGen = DatasetGenerator(X_valid, y_valid, config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH,
-                          args['batch_size'], config.STEERING_CORRECTION, os.path.join(data_folder, 'IMG'))
+trainGen = DatasetGenerator(X_train, y_train, args['batch_size'], os.path.join(data_folder, 'IMG'))
+valGen = DatasetGenerator(X_valid, y_valid, args['batch_size'], os.path.join(data_folder, 'IMG'))
 
 print("[INFO] train model...")
 H = model.fit_generator(trainGen.generator(),
