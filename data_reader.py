@@ -25,7 +25,7 @@ def read_samples_from_file(driving_log_filepath, steering_correction=0.25):
 
             image_paths.extend([center, left, right])
             measurements.extend([(steering, throttle, brake, speed),
-                                 (steering + steering_correction, throttle, brake, speed),
-                                 (steering - steering_correction, throttle, brake, speed)])
+                                 (steering - steering_correction, throttle, brake, speed),
+                                 (steering + steering_correction, throttle, brake, speed)])
 
     return image_paths, measurements
