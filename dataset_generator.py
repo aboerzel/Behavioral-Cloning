@@ -39,13 +39,13 @@ class DatasetGenerator:
         return cv2.flip(image, 1)
 
     @staticmethod
-    def random_trans(image, steer, trans_range):
-        rows, cols, _ = image.shape;
+    def random_trans(image, steering, trans_range):
+        rows, cols, _ = image.shape
         tr_x = trans_range * np.random.uniform() - trans_range / 2
-        steer_ang = steer + tr_x / trans_range * 2 * .2
+        steer_ang = steering + tr_x / trans_range * 2 * .2
         tr_y = 40 * np.random.uniform() - 40 / 2
-        Trans_M = np.float32([[1, 0, tr_x], [0, 1, tr_y]])
-        image_tr = cv2.warpAffine(image, Trans_M, (cols, rows))
+        trans_M = np.float32([[1, 0, tr_x], [0, 1, tr_y]])
+        image_tr = cv2.warpAffine(image, trans_M, (cols, rows))
         return image_tr, steer_ang
 
     def generator(self, passes=np.inf):
