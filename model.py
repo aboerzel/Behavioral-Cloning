@@ -108,6 +108,10 @@ print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
                                                    config.STEERING_CORRECTION)
 
+plt.hist(np.array(measurements)[:, 0], bins=20)
+plt.savefig('./examples/steering_distribution_before.png')
+plt.show()
+
 # samples turning from right to left (negative angle)
 left_inds = np.where(np.array(measurements)[:, 0] < -config.STEERING_THREASHOLD)[0]
 
@@ -130,6 +134,10 @@ for i in range(num_straight_samples - len(right_inds)):
     n = random.choice(right_inds)
     image_names.append(image_names[n])
     measurements.append(measurements[n])
+
+plt.hist(np.array(measurements)[:, 0], bins=20)
+plt.savefig('./examples/steering_distribution_after.png')
+plt.show()
 
 # split into train and validation data
 X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.20, shuffle=True)
