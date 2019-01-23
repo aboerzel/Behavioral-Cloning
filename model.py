@@ -83,9 +83,9 @@ def get_callbacks():
     model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
         TensorBoard(log_dir="logs".format()),
-        EarlyStopping(monitor='val_loss', min_delta=0, patience=2, mode='auto', verbose=1),
+        EarlyStopping(monitor='val_loss', min_delta=0, patience=4, mode='auto', verbose=1),
         ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
-        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=1, verbose=1, mode='auto', epsilon=1e-4, cooldown=0,
+        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, verbose=1, mode='auto', epsilon=1e-4, cooldown=0,
                           min_lr=0)]
     return callbacks
 
