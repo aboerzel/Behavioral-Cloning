@@ -39,14 +39,17 @@ class DatasetGenerator:
         return cv2.flip(image, 1)
 
     @staticmethod
-    def random_trans(image, steering, trans_range):
+    def random_trans(image, steering):
         rows, cols, _ = image.shape
-        tr_x = trans_range * np.random.uniform() - trans_range / 2
-        steer_ang = steering + tr_x / trans_range * 2 * .2
-        tr_y = 40 * np.random.uniform() - 40 / 2
-        trans_M = np.float32([[1, 0, tr_x], [0, 1, tr_y]])
-        image_tr = cv2.warpAffine(image, trans_M, (cols, rows))
-        return image_tr, steer_ang
+        transRange = 100
+        numPixels = 10
+        valPixels = 0.4
+        transX = transRange * np.random.uniform() - transRange / 2
+        steering = steering + transX / transRange * 2 * valPixels
+        transY = numPixels * np.random.uniform() - numPixels / 2
+        transMat = np.float32([[1, 0, transX], [0, 1, transY]])
+        image = cv2.warpAffine(image, transMat, (cols, rows))
+        return image, steering
 
     def generator(self, passes=np.inf):
         # initialize the epoch count
@@ -61,7 +64,7 @@ class DatasetGenerator:
 
             for image_name, (steering, throttle, brake, speed) in zip(image_names, measurements):
 
-                image, steering = self.random_trans(self.read_image(image_name), steering, 20)
+                image, steering = self.random_trans(self.read_image(image_name), steering)
 
                 # flip about each second image horizontal
                 if randint(0, 1) == 1:
