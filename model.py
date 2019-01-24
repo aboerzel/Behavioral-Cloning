@@ -1,14 +1,17 @@
 import argparse
 import os
+from random import randint
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import sklearn
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 from keras.layers import Flatten, Dense, Lambda, Conv2D, Cropping2D, BatchNormalization, Activation, Dropout
 from keras.models import Sequential
 from keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 
 import config
 from data_reader import read_samples_from_file
@@ -39,23 +42,23 @@ class Nvidia:
     @staticmethod
     def build(base_model):
         base_model.add(Conv2D(24, (5, 5), strides=(2, 2)))
-        #base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(36, (5, 5), strides=(2, 2)))
-        #base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
-        #base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(64, (3, 3)))
-        #base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(64, (3, 3)))
-        #base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dropout(0.5))
@@ -63,15 +66,15 @@ class Nvidia:
         base_model.add(Flatten())
 
         base_model.add(Dense(100))
-        #base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dense(50))
-        #base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dense(10))
-        #base_model.add(BatchNormalization())
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dense(1))
@@ -107,9 +110,12 @@ print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
                                                    config.STEERING_CORRECTION)
 
-plt.hist(np.array(measurements)[:, 0], bins=21)
-plt.savefig('./examples/steering_distribution_before.png')
-plt.show()
+measurements = np.array(measurements)
+
+
+# plt.hist(np.array(measurements)[:, 0], bins=21)
+# plt.savefig('./examples/steering_distribution_before.png')
+# plt.show()
 
 
 def distribute_data(image_names, measurements, min=500, max=750):
@@ -125,6 +131,9 @@ def distribute_data(image_names, measurements, min=500, max=750):
         if num_hist[i - 1] < min:
             # find the index where values fall within the range
             match_idx = np.where((steering_angles >= idx_hist[i - 1]) & (steering_angles < idx_hist[i]))[0]
+
+            if len(match_idx) == 0:
+                continue
 
             count_to_be_added = min - num_hist[i - 1]
             while len(match_idx) < count_to_be_added:
@@ -151,14 +160,61 @@ def distribute_data(image_names, measurements, min=500, max=750):
     return image_names, measurements
 
 
-image_names, measurements = distribute_data(image_names, measurements)
+# image_names, measurements = distribute_data(image_names, measurements)
 
-plt.hist(np.array(measurements)[:, 0], bins=21)
-plt.savefig('./examples/steering_distribution_after.png')
-plt.show()
+# plt.hist(np.array(measurements)[:, 0], bins=21)
+# plt.savefig('./examples/steering_distribution_after.png')
+# plt.show()
 
 # split into train and validation data
 X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.20, shuffle=True)
+
+
+def random_trans(image, steer, trans_range):
+    rows, cols, _ = image.shape
+    tr_x = trans_range * np.random.uniform() - trans_range / 2
+    steer_ang = steer + tr_x / trans_range * 2 * .2
+    tr_y = 40 * np.random.uniform() - 40 / 2
+    Trans_M = np.float32([[1, 0, tr_x], [0, 1, tr_y]])
+    image_tr = cv2.warpAffine(image, Trans_M, (cols, rows))
+    return image_tr, steer_ang
+
+
+def read_image(filename):
+    return cv2.imread(os.path.join(data_folder, 'IMG', filename), cv2.COLOR_BGR2RGB)
+
+
+def flip_horizontal(image):
+    return cv2.flip(image, 1)
+
+
+def generate_train_batch(image_names, measurements, batch_size, train_mode):
+    while True:
+        images = []
+        steerings = []
+
+        image_names, measurements = shuffle(image_names, measurements)
+        rand_indexes = np.random.choice(np.arange(len(image_names)), batch_size)
+
+        for rand_index in rand_indexes:
+            image = read_image(image_names[rand_index])
+            steering = measurements[rand_index]
+            if train_mode:
+                image, steering = random_trans(image, steering, 20)
+
+            # flip about each second image horizontal
+            if randint(0, 1) == 1:
+                images.append(flip_horizontal(image))
+                steerings.append(-steering)
+            else:
+                images.append(image)
+                steerings.append(steering)
+
+        yield np.array(images), np.array(steerings)
+
+
+train_generator = generate_train_batch(X_train, y_train[:, 0], args['batch_size'], True)
+val_generator = generate_train_batch(X_valid, y_valid[:, 0], args['batch_size'], False)
 
 print("[INFO] create model...")
 model = Nvidia.build(Preprocessing.build(IMAGE_SHAPE))
@@ -166,17 +222,11 @@ model.summary()
 
 model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
 
-trainGen = DatasetGenerator(X_train, y_train, args['batch_size'], train_mode=True,
-                            image_path=os.path.join(data_folder, 'IMG'))
-
-valGen = DatasetGenerator(X_valid, y_valid, args['batch_size'], train_mode=False,
-                          image_path=os.path.join(data_folder, 'IMG'))
-
 print("[INFO] train model...")
-H = model.fit_generator(trainGen.generator(),
-                        steps_per_epoch=trainGen.numImages // args['batch_size'],
-                        validation_data=valGen.generator(),
-                        validation_steps=valGen.numImages // args['batch_size'],
+H = model.fit_generator(train_generator,
+                        steps_per_epoch=len(X_train) // args['batch_size'],
+                        validation_data=val_generator,
+                        validation_steps=len(X_valid) // args['batch_size'],
                         epochs=args['epochs'],
                         callbacks=get_callbacks())
 
