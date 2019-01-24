@@ -1,11 +1,11 @@
 import argparse
 import os
+import random
 from random import randint
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import sklearn
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 from keras.layers import Flatten, Dense, Lambda, Conv2D, Cropping2D, BatchNormalization, Activation, Dropout
 from keras.models import Sequential
@@ -15,7 +15,6 @@ from sklearn.utils import shuffle
 
 import config
 from data_reader import read_samples_from_file
-from dataset_generator import DatasetGenerator
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--datapath", default=config.DATASET_ROOT_PATH, help="sample driving data path")
@@ -34,7 +33,7 @@ class Preprocessing:
     def build(input_shape):
         model = Sequential()
         model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))  # normalize between -0.5 and +0.5
-        model.add(Cropping2D(cropping=((50, 20), (0, 0))))  # remove the sky and the car front
+        # model.add(Cropping2D(cropping=((50, 20), (0, 0))))  # remove the sky and the car front
         return model
 
 
@@ -184,6 +183,23 @@ def read_image(filename):
     return cv2.imread(os.path.join(data_folder, 'IMG', filename), cv2.COLOR_BGR2RGB)
 
 
+def make_roi(image):
+    crop_img = image[50:140, 0:320, :]
+    crop_img = cv2.resize(crop_img, (config.IMAGE_HEIGHT, config.IMAGE_WIDTH), cv2.INTER_AREA)
+    return crop_img
+
+
+def random_brightness(image):
+    # Convert 2 HSV colorspace from RGB colorspace
+    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    # Generate new random brightness
+    rand = random.uniform(0.3, 1.0)
+    hsv[:, :, 2] = rand * hsv[:, :, 2]
+    # Convert back to RGB colorspace
+    new_img = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
+    return new_img
+
+
 def flip_horizontal(image):
     return cv2.flip(image, 1)
 
@@ -197,18 +213,22 @@ def generate_train_batch(image_names, measurements, batch_size, train_mode):
         rand_indexes = np.random.choice(np.arange(len(image_names)), batch_size)
 
         for rand_index in rand_indexes:
-            image = read_image(image_names[rand_index])
+            image = make_roi(random_brightness(read_image(image_names[rand_index])))
             steering = measurements[rand_index]
+
             if train_mode:
                 image, steering = random_trans(image, steering, 20)
 
+            images.append(image)
+            steerings.append(steering)
+
             # flip about each second image horizontal
-            if randint(0, 1) == 1:
-                images.append(flip_horizontal(image))
-                steerings.append(-steering)
-            else:
-                images.append(image)
-                steerings.append(steering)
+            # if randint(0, 1) == 1 and abs(steering) > 0.15:
+            #     images.append(flip_horizontal(image))
+            #     steerings.append(-steering)
+            # else:
+            #     images.append(image)
+            #     steerings.append(steering)
 
         yield np.array(images), np.array(steerings)
 

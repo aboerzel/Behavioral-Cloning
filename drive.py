@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 import shutil
 
+import cv2
 import numpy as np
 import socketio
 import eventlet
@@ -16,6 +17,8 @@ from keras.models import load_model
 import h5py
 from keras import __version__ as keras_version
 from scipy import ndimage
+
+import config
 
 sio = socketio.Server()
 app = Flask(__name__)
@@ -49,6 +52,13 @@ set_speed = 9
 controller.set_desired(set_speed)
 
 
+def balance_brightness(image):
+    img_yuv = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
+    img_yuv[:, :, 0] = cv2.equalizeHist(img_yuv[:, :, 0])
+    img_out = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2RGB)
+    return img_out
+
+
 @sio.on('telemetry')
 def telemetry(sid, data):
     if data:
@@ -62,6 +72,8 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
+        image_array = balance_brightness(image_array)
+        image_array = cv2.resize(image_array[50:140, :], (config.IMAGE_HEIGHT, config.IMAGE_WIDTH))  # my modification
         steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
         throttle = controller.update(float(speed))

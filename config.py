@@ -8,8 +8,8 @@ DRIVING_LOG = "driving_log.csv"
 OUTPUT_PATH = "output"
 
 # network image size
-IMAGE_WIDTH = 320
-IMAGE_HEIGHT = 160
+IMAGE_WIDTH = 64
+IMAGE_HEIGHT = 64
 IMAGE_DEPTH = 3
 
 # training parameter
