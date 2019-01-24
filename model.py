@@ -1,6 +1,5 @@
 import argparse
 import os
-import random
 
 import cv2
 import matplotlib.pyplot as plt
@@ -40,23 +39,23 @@ class Nvidia:
     @staticmethod
     def build(base_model):
         base_model.add(Conv2D(24, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
+        #base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(36, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
+        #base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
+        #base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(64, (3, 3)))
-        base_model.add(BatchNormalization())
+        #base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(64, (3, 3)))
-        base_model.add(BatchNormalization())
+        #base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dropout(0.5))
@@ -64,15 +63,15 @@ class Nvidia:
         base_model.add(Flatten())
 
         base_model.add(Dense(100))
-        base_model.add(BatchNormalization())
+        #base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dense(50))
-        base_model.add(BatchNormalization())
+        #base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dense(10))
-        base_model.add(BatchNormalization())
+        #base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
 
         base_model.add(Dense(1))
@@ -108,34 +107,53 @@ print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
                                                    config.STEERING_CORRECTION)
 
-plt.hist(np.array(measurements)[:, 0], bins=20)
+plt.hist(np.array(measurements)[:, 0], bins=21)
 plt.savefig('./examples/steering_distribution_before.png')
 plt.show()
 
-# samples turning from right to left (negative angle)
-left_inds = np.where(np.array(measurements)[:, 0] < -config.STEERING_THREASHOLD)[0]
 
-# samples turning from left to right (positive angle)
-right_inds = np.where(np.array(measurements)[:, 0] > config.STEERING_THREASHOLD)[0]
+def distribute_data(image_names, measurements, min=500, max=750):
+    image_names = np.array(image_names)
+    measurements = np.asarray(measurements)
 
-# samples driving straight ahead
-straight_ind = np.delete(np.arange(0, len(measurements)), np.concatenate([right_inds, left_inds]))
+    # create histogram to know what needs to be added
+    steering_angles = measurements[:, 0]
 
-num_straight_samples = len(straight_ind)
+    num_hist, idx_hist = np.histogram(steering_angles, 21)
 
-# randomly select left-drifting samples and fill the left-drifting samples to the same number as the straight-samples
-for i in range(num_straight_samples - len(left_inds)):
-    n = random.choice(left_inds)
-    image_names.append(image_names[n])
-    measurements.append(measurements[n])
+    for i in range(1, len(num_hist)):
+        if num_hist[i - 1] < min:
+            # find the index where values fall within the range
+            match_idx = np.where((steering_angles >= idx_hist[i - 1]) & (steering_angles < idx_hist[i]))[0]
 
-# randomly select right-drifting samples and fill the right-drifting samples to the same number as the straight-samples
-for i in range(num_straight_samples - len(right_inds)):
-    n = random.choice(right_inds)
-    image_names.append(image_names[n])
-    measurements.append(measurements[n])
+            count_to_be_added = min - num_hist[i - 1]
+            while len(match_idx) < count_to_be_added:
+                match_idx = np.concatenate((match_idx, match_idx))
 
-plt.hist(np.array(measurements)[:, 0], bins=20)
+            # randomly choose up to the minimum
+            to_be_added = np.random.choice(match_idx, count_to_be_added)
+            measurements = np.concatenate((measurements, measurements[to_be_added]))
+            image_names = np.concatenate((image_names, image_names[to_be_added]))
+            steering_angles = np.concatenate((steering_angles, measurements[to_be_added][:, 0]))
+
+        elif num_hist[i - 1] > max:
+            # find the index where values fall within the range
+            match_idx = np.where((steering_angles >= idx_hist[i - 1]) & (steering_angles < idx_hist[i]))[0]
+
+            while len(match_idx) > max:
+                # randomly choose up to the maximum
+                to_be_deleted = np.random.choice(match_idx, len(match_idx) - max)
+                measurements = np.delete(measurements, to_be_deleted, axis=0)
+                image_names = np.delete(image_names, to_be_deleted)
+                steering_angles = np.delete(steering_angles, to_be_deleted)
+                match_idx = np.where((steering_angles >= idx_hist[i - 1]) & (steering_angles < idx_hist[i]))[0]
+
+    return image_names, measurements
+
+
+image_names, measurements = distribute_data(image_names, measurements)
+
+plt.hist(np.array(measurements)[:, 0], bins=21)
 plt.savefig('./examples/steering_distribution_after.png')
 plt.show()
 
@@ -148,8 +166,11 @@ model.summary()
 
 model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
 
-trainGen = DatasetGenerator(X_train, y_train, args['batch_size'], os.path.join(data_folder, 'IMG'))
-valGen = DatasetGenerator(X_valid, y_valid, args['batch_size'], os.path.join(data_folder, 'IMG'))
+trainGen = DatasetGenerator(X_train, y_train, args['batch_size'], train_mode=True,
+                            image_path=os.path.join(data_folder, 'IMG'))
+
+valGen = DatasetGenerator(X_valid, y_valid, args['batch_size'], train_mode=False,
+                          image_path=os.path.join(data_folder, 'IMG'))
 
 print("[INFO] train model...")
 H = model.fit_generator(trainGen.generator(),
