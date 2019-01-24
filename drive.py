@@ -72,9 +72,11 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
-        image_array = balance_brightness(image_array)
+        #image_array = balance_brightness(image_array)
         image_array = cv2.resize(image_array[50:140, :], (config.IMAGE_HEIGHT, config.IMAGE_WIDTH))  # my modification
-        steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
+        image_array = image_array[None, :, :, :]
+        image_array = image_array / 255 - .5
+        steering_angle = float(model.predict(image_array, batch_size=1))
 
         throttle = controller.update(float(speed))
 
@@ -148,6 +150,9 @@ if __name__ == '__main__':
     # On my computer, error CUDA_XXX occurs when the first telemetry call occurs.
     # I was able to prevent the error by making a predictive call on the model once before the telemetry call.
     image = ndimage.imread('../sample_driving_data/IMG/center_2016_12_01_13_30_48_287.jpg')
+    image = cv2.resize(image[50:140, :], (config.IMAGE_HEIGHT, config.IMAGE_WIDTH))
+    image = image.astype(np.float32) / 255 - .5
+
     steering_angle = float(model.predict(np.array([image]), batch_size=1))
     print(steering_angle)
 

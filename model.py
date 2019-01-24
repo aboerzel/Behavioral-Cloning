@@ -1,13 +1,12 @@
 import argparse
 import os
 import random
-from random import randint
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
-from keras.layers import Flatten, Dense, Lambda, Conv2D, Cropping2D, BatchNormalization, Activation, Dropout
+from keras.layers import Flatten, Dense, Lambda, Conv2D, BatchNormalization, Activation, Dropout
 from keras.models import Sequential
 from keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
@@ -25,7 +24,7 @@ args = vars(ap.parse_args())
 
 data_folder = args['datapath']
 
-IMAGE_SHAPE = (config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH)
+IMAGE_SHAPE = (config.IMAGE_WIDTH, config.IMAGE_HEIGHT, config.IMAGE_DEPTH)
 
 
 class Preprocessing:
@@ -193,8 +192,8 @@ def random_brightness(image):
     # Convert 2 HSV colorspace from RGB colorspace
     hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
     # Generate new random brightness
-    rand = random.uniform(0.3, 1.0)
-    hsv[:, :, 2] = rand * hsv[:, :, 2]
+    brightness = random.uniform(0.3, 1.0)
+    hsv[:, :, 2] = brightness * hsv[:, :, 2]
     # Convert back to RGB colorspace
     new_img = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
     return new_img
@@ -202,6 +201,14 @@ def random_brightness(image):
 
 def flip_horizontal(image):
     return cv2.flip(image, 1)
+
+
+def image_blur(img):
+    # Blur image with random kernel
+    kernel_size = random.randint(1, 5)
+    if kernel_size % 2 != 1:
+        kernel_size += 1
+    return cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
 
 
 def generate_train_batch(image_names, measurements, batch_size, train_mode):
@@ -213,7 +220,7 @@ def generate_train_batch(image_names, measurements, batch_size, train_mode):
         rand_indexes = np.random.choice(np.arange(len(image_names)), batch_size)
 
         for rand_index in rand_indexes:
-            image = make_roi(random_brightness(read_image(image_names[rand_index])))
+            image = make_roi(random_brightness(image_blur(read_image(image_names[rand_index]))))
             steering = measurements[rand_index]
 
             if train_mode:
