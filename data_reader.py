@@ -1,4 +1,5 @@
 import csv
+import numpy as np
 
 
 def read_samples_from_file(driving_log_filepath, steering_correction):
@@ -28,4 +29,4 @@ def read_samples_from_file(driving_log_filepath, steering_correction):
                                  (steering - steering_correction, throttle, brake, speed),
                                  (steering + steering_correction, throttle, brake, speed)])
 
-    return image_paths, measurements
+    return np.array(image_paths), np.array(measurements)

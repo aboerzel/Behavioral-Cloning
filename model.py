@@ -1,14 +1,14 @@
 import argparse
 import os
-import random
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
-from keras.layers import Flatten, Dense, Lambda, Conv2D, BatchNormalization, Activation, Dropout
+from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout
 from keras.models import Sequential
 from keras.optimizers import Adam
+from keras.regularizers import l2
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
@@ -27,54 +27,37 @@ data_folder = args['datapath']
 IMAGE_SHAPE = (config.IMAGE_WIDTH, config.IMAGE_HEIGHT, config.IMAGE_DEPTH)
 
 
-class Preprocessing:
+class Normalization:
     @staticmethod
     def build(input_shape):
         model = Sequential()
-        model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))  # normalize between -0.5 and +0.5
-        # model.add(Cropping2D(cropping=((50, 20), (0, 0))))  # remove the sky and the car front
+        # normalize and mean centering between -0.5 and +0.5
+        # model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))
+        model.add(Lambda(lambda x: (x / 127.5) - 1.0, input_shape=input_shape))
         return model
 
 
 class Nvidia:
     @staticmethod
     def build(base_model):
-        base_model.add(Conv2D(24, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
+        base_model.add(Conv2D(24, (5, 5), strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
         base_model.add(Activation('elu'))
-
-        base_model.add(Conv2D(36, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
+        base_model.add(Conv2D(36, (5, 5), strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
         base_model.add(Activation('elu'))
-
-        base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
+        base_model.add(Conv2D(48, (5, 5), strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
         base_model.add(Activation('elu'))
-
-        base_model.add(Conv2D(64, (3, 3)))
-        base_model.add(BatchNormalization())
+        base_model.add(Conv2D(64, (3, 3), padding='valid', kernel_regularizer=l2(0.001)))
         base_model.add(Activation('elu'))
-
-        base_model.add(Conv2D(64, (3, 3)))
-        base_model.add(BatchNormalization())
+        base_model.add(Conv2D(64, (3, 3), padding='valid', kernel_regularizer=l2(0.001)))
         base_model.add(Activation('elu'))
-
-        base_model.add(Dropout(0.5))
-
+        # base_model.add(Dropout(0.5))
         base_model.add(Flatten())
-
-        base_model.add(Dense(100))
-        base_model.add(BatchNormalization())
+        base_model.add(Dense(100, kernel_regularizer=l2(0.001)))
         base_model.add(Activation('elu'))
-
-        base_model.add(Dense(50))
-        base_model.add(BatchNormalization())
+        base_model.add(Dense(50, kernel_regularizer=l2(0.001)))
         base_model.add(Activation('elu'))
-
-        base_model.add(Dense(10))
-        base_model.add(BatchNormalization())
+        base_model.add(Dense(10, kernel_regularizer=l2(0.001)))
         base_model.add(Activation('elu'))
-
         base_model.add(Dense(1))
         return base_model
 
@@ -82,11 +65,11 @@ class Nvidia:
 def get_callbacks():
     model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
-        TensorBoard(log_dir="logs".format()),
+        # TensorBoard(log_dir="logs".format()),
         EarlyStopping(monitor='val_loss', min_delta=0, patience=4, mode='auto', verbose=1),
-        ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
-        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, verbose=1, mode='auto', epsilon=1e-4, cooldown=0,
-                          min_lr=0)]
+        ModelCheckpoint(model_filepath, save_best_only=True, verbose=1)]
+    # ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, verbose=1, mode='auto', epsilon=1e-4, cooldown=0,
+    #                  min_lr=0)]
     return callbacks
 
 
@@ -107,8 +90,6 @@ def plot_and_save_train_history(H):
 print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
                                                    config.STEERING_CORRECTION)
-
-measurements = np.array(measurements)
 
 
 # plt.hist(np.array(measurements)[:, 0], bins=21)
@@ -168,7 +149,23 @@ def distribute_data(image_names, measurements, min=500, max=750):
 X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.20, shuffle=True)
 
 
-def random_trans(image, steer, trans_range):
+def read_image(filename):
+    return cv2.imread(os.path.join(data_folder, 'IMG', filename))
+
+
+def preprocess_image(img):
+    # crop region of interest
+    new_img = img[50:140, :, :]
+    # apply little blur
+    new_img = cv2.GaussianBlur(new_img, (3, 3), 0)
+    # scale to 66x200x3 (same as nVidia)
+    new_img = cv2.resize(new_img, (config.IMAGE_HEIGHT, config.IMAGE_WIDTH), interpolation=cv2.INTER_AREA)
+    # convert to YUV color space (as nVidia paper suggests)
+    new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2YUV)
+    return new_img
+
+
+def random_trans(image, steer, trans_range=20):
     rows, cols, _ = image.shape
     tr_x = trans_range * np.random.uniform() - trans_range / 2
     steer_ang = steer + tr_x / trans_range * 2 * .2
@@ -178,37 +175,39 @@ def random_trans(image, steer, trans_range):
     return image_tr, steer_ang
 
 
-def read_image(filename):
-    return cv2.imread(os.path.join(data_folder, 'IMG', filename), cv2.COLOR_BGR2RGB)
+def random_distort(img, angle):
+    new_img = img.astype(float)
 
+    # random brightness - the mask bit keeps values from going beyond (0,255)
+    # value = np.random.randint(-28, 28)
+    # if value > 0:
+    #     mask = (new_img[:, :, 0] + value) > 255
+    # if value <= 0:
+    #     mask = (new_img[:, :, 0] + value) < 0
+    # new_img[:, :, 0] += np.where(mask, 0, value)
 
-def make_roi(image):
-    crop_img = image[50:140, 0:320, :]
-    crop_img = cv2.resize(crop_img, (config.IMAGE_HEIGHT, config.IMAGE_WIDTH), cv2.INTER_AREA)
-    return crop_img
+    # random shadow - full height, random left/right side, random darkening
+    # h, w = new_img.shape[0:2]
+    # mid = np.random.randint(0, w)
+    # factor = np.random.uniform(0.6, 0.8)
+    # if np.random.rand() > .5:
+    #     new_img[:, 0:mid, 0] *= factor
+    # else:
+    #     new_img[:, mid:w, 0] *= factor
 
-
-def random_brightness(image):
-    # Convert 2 HSV colorspace from RGB colorspace
-    hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-    # Generate new random brightness
-    brightness = random.uniform(0.3, 1.0)
-    hsv[:, :, 2] = brightness * hsv[:, :, 2]
-    # Convert back to RGB colorspace
-    new_img = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
-    return new_img
+    # randomly shift horizon
+    h, w, _ = new_img.shape
+    horizon = 2 * h / 5
+    v_shift = np.random.randint(-h / 8, h / 8)
+    pts1 = np.float32([[0, horizon], [w, horizon], [0, h], [w, h]])
+    pts2 = np.float32([[0, horizon + v_shift], [w, horizon + v_shift], [0, h], [w, h]])
+    M = cv2.getPerspectiveTransform(pts1, pts2)
+    new_img = cv2.warpPerspective(new_img, M, (w, h), borderMode=cv2.BORDER_REPLICATE)
+    return new_img.astype(np.uint8), angle
 
 
 def flip_horizontal(image):
     return cv2.flip(image, 1)
-
-
-def image_blur(img):
-    # Blur image with random kernel
-    kernel_size = random.randint(1, 5)
-    if kernel_size % 2 != 1:
-        kernel_size += 1
-    return cv2.GaussianBlur(img, (kernel_size, kernel_size), 0)
 
 
 def generate_train_batch(image_names, measurements, batch_size, train_mode):
@@ -217,34 +216,31 @@ def generate_train_batch(image_names, measurements, batch_size, train_mode):
         steerings = []
 
         image_names, measurements = shuffle(image_names, measurements)
-        rand_indexes = np.random.choice(np.arange(len(image_names)), batch_size)
 
-        for rand_index in rand_indexes:
-            image = make_roi(random_brightness(image_blur(read_image(image_names[rand_index]))))
-            steering = measurements[rand_index]
+        for i in range(batch_size):
+            image = preprocess_image(read_image(image_names[i]))
+            steering = measurements[i]
 
             if train_mode:
-                image, steering = random_trans(image, steering, 20)
+                image, steering = random_distort(image, steering)
 
             images.append(image)
             steerings.append(steering)
 
             # flip about each second image horizontal
-            # if randint(0, 1) == 1 and abs(steering) > 0.15:
-            #     images.append(flip_horizontal(image))
-            #     steerings.append(-steering)
-            # else:
-            #     images.append(image)
-            #     steerings.append(steering)
+            if abs(steering) > 0.30:
+                images.append(flip_horizontal(image))
+                steerings.append(-steering)
 
-        yield np.array(images), np.array(steerings)
+        shuffle(np.array(images), np.array(steerings))
+        yield np.array(images)[:batch_size], np.array(steerings)[:batch_size]
 
 
 train_generator = generate_train_batch(X_train, y_train[:, 0], args['batch_size'], True)
 val_generator = generate_train_batch(X_valid, y_valid[:, 0], args['batch_size'], False)
 
 print("[INFO] create model...")
-model = Nvidia.build(Preprocessing.build(IMAGE_SHAPE))
+model = Nvidia.build(Normalization.build(IMAGE_SHAPE))
 model.summary()
 
 model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
