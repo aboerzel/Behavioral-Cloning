@@ -6,7 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
-from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout
+from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, BatchNormalization
 from keras.models import Sequential
 from keras.optimizers import Adam
 from keras.regularizers import l2
@@ -33,31 +33,64 @@ class Normalization:
     def build(input_shape):
         model = Sequential()
         # normalize and mean centering between -0.5 and +0.5
-        # model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))
-        model.add(Lambda(lambda x: (x / 127.5) - 1.0, input_shape=input_shape))
+        model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))
+        # model.add(Lambda(lambda x: (x / 127.5) - 1.0, input_shape=input_shape))
         return model
+
+
+# class Nvidia:
+#     @staticmethod
+#     def build(base_model):
+#         base_model.add(Conv2D(24, (5, 5), strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
+#         base_model.add(Activation('elu'))
+#         base_model.add(Conv2D(36, (5, 5), strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
+#         base_model.add(Activation('elu'))
+#         base_model.add(Conv2D(48, (5, 5), strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
+#         base_model.add(Activation('elu'))
+#         base_model.add(Conv2D(64, (3, 3), padding='valid', kernel_regularizer=l2(0.001)))
+#         base_model.add(Activation('elu'))
+#         base_model.add(Conv2D(64, (3, 3), padding='valid', kernel_regularizer=l2(0.001)))
+#         base_model.add(Activation('elu'))
+#         base_model.add(Dropout(0.5))
+#         base_model.add(Flatten())
+#         base_model.add(Dense(100, kernel_regularizer=l2(0.001)))
+#         base_model.add(Activation('elu'))
+#         base_model.add(Dense(50, kernel_regularizer=l2(0.001)))
+#         base_model.add(Activation('elu'))
+#         base_model.add(Dense(10, kernel_regularizer=l2(0.001)))
+#         base_model.add(Activation('elu'))
+#         base_model.add(Dense(1))
+#         return base_model
 
 
 class Nvidia:
     @staticmethod
     def build(base_model):
-        base_model.add(Conv2D(24, (5, 5), strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
+        base_model.add(Conv2D(24, (5, 5), strides=(2, 2)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        base_model.add(Conv2D(36, (5, 5), strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
+        base_model.add(Conv2D(36, (5, 5), strides=(2, 2)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        base_model.add(Conv2D(48, (5, 5), strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
+        base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        base_model.add(Conv2D(64, (3, 3), padding='valid', kernel_regularizer=l2(0.001)))
+        base_model.add(Conv2D(64, (3, 3)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        base_model.add(Conv2D(64, (3, 3), padding='valid', kernel_regularizer=l2(0.001)))
+        base_model.add(Conv2D(64, (3, 3)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        # base_model.add(Dropout(0.5))
+        base_model.add(Dropout(0.5))
         base_model.add(Flatten())
-        base_model.add(Dense(100, kernel_regularizer=l2(0.001)))
+        base_model.add(Dense(100))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        base_model.add(Dense(50, kernel_regularizer=l2(0.001)))
+        base_model.add(Dense(50))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        base_model.add(Dense(10, kernel_regularizer=l2(0.001)))
+        base_model.add(Dense(10))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Dense(1))
         return base_model
@@ -99,7 +132,10 @@ plt.show()
 
 def distribute_data(image_names, measurements):
     num_hist, idx_hist = np.histogram(measurements[:, 0], 21)
-    max = int(np.median(num_hist))
+    # max = int(np.median(num_hist))
+    max = int(np.average(num_hist))
+
+    #max = 1000
 
     for i in range(len(num_hist)):
         if num_hist[i] > max:
@@ -151,13 +187,13 @@ def random_distort(img, angle):
     new_img[:, :, 0] += np.where(mask, 0, value)
 
     # random shadow - full height, random left/right side, random darkening
-    # h, w = new_img.shape[0:2]
-    # mid = np.random.randint(0, w)
-    # factor = np.random.uniform(0.6, 0.8)
-    # if np.random.rand() > .5:
-    #     new_img[:, 0:mid, 0] *= factor
-    # else:
-    #     new_img[:, mid:w, 0] *= factor
+    h, w = new_img.shape[0:2]
+    mid = np.random.randint(0, w)
+    factor = np.random.uniform(0.6, 0.8)
+    if np.random.rand() > .5:
+        new_img[:, 0:mid, 0] *= factor
+    else:
+        new_img[:, mid:w, 0] *= factor
 
     # randomly shift horizon
     h, w, _ = new_img.shape
