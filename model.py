@@ -5,11 +5,10 @@ from random import sample, randint
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, BatchNormalization
 from keras.models import Sequential
 from keras.optimizers import Adam
-from keras.regularizers import l2
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
@@ -36,31 +35,6 @@ class Normalization:
         model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))
         # model.add(Lambda(lambda x: (x / 127.5) - 1.0, input_shape=input_shape))
         return model
-
-
-# class Nvidia:
-#     @staticmethod
-#     def build(base_model):
-#         base_model.add(Conv2D(24, (5, 5), strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
-#         base_model.add(Activation('elu'))
-#         base_model.add(Conv2D(36, (5, 5), strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
-#         base_model.add(Activation('elu'))
-#         base_model.add(Conv2D(48, (5, 5), strides=(2, 2), padding='valid', kernel_regularizer=l2(0.001)))
-#         base_model.add(Activation('elu'))
-#         base_model.add(Conv2D(64, (3, 3), padding='valid', kernel_regularizer=l2(0.001)))
-#         base_model.add(Activation('elu'))
-#         base_model.add(Conv2D(64, (3, 3), padding='valid', kernel_regularizer=l2(0.001)))
-#         base_model.add(Activation('elu'))
-#         base_model.add(Dropout(0.5))
-#         base_model.add(Flatten())
-#         base_model.add(Dense(100, kernel_regularizer=l2(0.001)))
-#         base_model.add(Activation('elu'))
-#         base_model.add(Dense(50, kernel_regularizer=l2(0.001)))
-#         base_model.add(Activation('elu'))
-#         base_model.add(Dense(10, kernel_regularizer=l2(0.001)))
-#         base_model.add(Activation('elu'))
-#         base_model.add(Dense(1))
-#         return base_model
 
 
 class Nvidia:
@@ -230,7 +204,7 @@ def generate_train_batch(data_bins, batch_size):
             if len(image_names) < 1:
                 continue
 
-            sample_ind = randint(0, len(image_names)-1)
+            sample_ind = randint(0, len(image_names) - 1)
             image_name = image_names[sample_ind]
             steering = measurements[sample_ind][0]
             image = preprocess_image(read_image(image_name))
