@@ -1,5 +1,6 @@
 import argparse
 import os
+from random import sample
 
 import cv2
 import matplotlib.pyplot as plt
@@ -91,59 +92,32 @@ print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
                                                    config.STEERING_CORRECTION)
 
+plt.hist(measurements[:, 0], bins=21)
+plt.savefig('./examples/steering_distribution_before.png')
+plt.show()
 
-# plt.hist(np.array(measurements)[:, 0], bins=21)
-# plt.savefig('./examples/steering_distribution_before.png')
-# plt.show()
 
+def distribute_data(image_names, measurements):
+    num_hist, idx_hist = np.histogram(measurements[:, 0], 21)
+    max = int(np.median(num_hist))
 
-def distribute_data(image_names, measurements, min=500, max=750):
-    image_names = np.array(image_names)
-    measurements = np.asarray(measurements)
-
-    # create histogram to know what needs to be added
-    steering_angles = measurements[:, 0]
-
-    num_hist, idx_hist = np.histogram(steering_angles, 21)
-
-    for i in range(1, len(num_hist)):
-        if num_hist[i - 1] < min:
+    for i in range(len(num_hist)):
+        if num_hist[i] > max:
             # find the index where values fall within the range
-            match_idx = np.where((steering_angles >= idx_hist[i - 1]) & (steering_angles < idx_hist[i]))[0]
-
-            if len(match_idx) == 0:
-                continue
-
-            count_to_be_added = min - num_hist[i - 1]
-            while len(match_idx) < count_to_be_added:
-                match_idx = np.concatenate((match_idx, match_idx))
-
-            # randomly choose up to the minimum
-            to_be_added = np.random.choice(match_idx, count_to_be_added)
-            measurements = np.concatenate((measurements, measurements[to_be_added]))
-            image_names = np.concatenate((image_names, image_names[to_be_added]))
-            steering_angles = np.concatenate((steering_angles, measurements[to_be_added][:, 0]))
-
-        elif num_hist[i - 1] > max:
-            # find the index where values fall within the range
-            match_idx = np.where((steering_angles >= idx_hist[i - 1]) & (steering_angles < idx_hist[i]))[0]
-
-            while len(match_idx) > max:
-                # randomly choose up to the maximum
-                to_be_deleted = np.random.choice(match_idx, len(match_idx) - max)
-                measurements = np.delete(measurements, to_be_deleted, axis=0)
-                image_names = np.delete(image_names, to_be_deleted)
-                steering_angles = np.delete(steering_angles, to_be_deleted)
-                match_idx = np.where((steering_angles >= idx_hist[i - 1]) & (steering_angles < idx_hist[i]))[0]
+            match_idx = np.where((measurements[:, 0] >= idx_hist[i]) & (measurements[:, 0] < idx_hist[i + 1]))[0]
+            # randomly choose up to the maximum
+            to_be_deleted = sample(list(match_idx), len(match_idx) - max)
+            measurements = np.delete(measurements, to_be_deleted, axis=0)
+            image_names = np.delete(image_names, to_be_deleted)
 
     return image_names, measurements
 
 
-# image_names, measurements = distribute_data(image_names, measurements)
+image_names, measurements = distribute_data(image_names, measurements)
 
-# plt.hist(np.array(measurements)[:, 0], bins=21)
-# plt.savefig('./examples/steering_distribution_after.png')
-# plt.show()
+plt.hist(np.array(measurements)[:, 0], bins=21)
+plt.savefig('./examples/steering_distribution_after.png')
+plt.show()
 
 # split into train and validation data
 X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.20, shuffle=True)
@@ -165,26 +139,16 @@ def preprocess_image(img):
     return new_img
 
 
-def random_trans(image, steer, trans_range=20):
-    rows, cols, _ = image.shape
-    tr_x = trans_range * np.random.uniform() - trans_range / 2
-    steer_ang = steer + tr_x / trans_range * 2 * .2
-    tr_y = 40 * np.random.uniform() - 40 / 2
-    Trans_M = np.float32([[1, 0, tr_x], [0, 1, tr_y]])
-    image_tr = cv2.warpAffine(image, Trans_M, (cols, rows))
-    return image_tr, steer_ang
-
-
 def random_distort(img, angle):
     new_img = img.astype(float)
 
     # random brightness - the mask bit keeps values from going beyond (0,255)
-    # value = np.random.randint(-28, 28)
-    # if value > 0:
-    #     mask = (new_img[:, :, 0] + value) > 255
-    # if value <= 0:
-    #     mask = (new_img[:, :, 0] + value) < 0
-    # new_img[:, :, 0] += np.where(mask, 0, value)
+    value = np.random.randint(-28, 28)
+    if value > 0:
+        mask = (new_img[:, :, 0] + value) > 255
+    if value <= 0:
+        mask = (new_img[:, :, 0] + value) < 0
+    new_img[:, :, 0] += np.where(mask, 0, value)
 
     # random shadow - full height, random left/right side, random darkening
     # h, w = new_img.shape[0:2]
