@@ -18,5 +18,5 @@ NUM_EPOCHS = 150
 LEARNING_RATE = 1.0e-4
 
 # steering correction for left and right camera
-STEERING_CORRECTION = 0.23
+STEERING_CORRECTION = 0.25
 

@@ -5,7 +5,7 @@ from random import sample, randint
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, BatchNormalization
 from keras.models import Sequential
 from keras.optimizers import Adam
@@ -75,9 +75,9 @@ def get_callbacks():
     callbacks = [
         # TensorBoard(log_dir="logs".format()),
         EarlyStopping(monitor='val_loss', min_delta=0, patience=4, mode='auto', verbose=1),
-        ModelCheckpoint(model_filepath, save_best_only=True, verbose=1)]
-    # ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, verbose=1, mode='auto', epsilon=1e-4, cooldown=0,
-    #                  min_lr=0)]
+        ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
+        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, verbose=1, mode='auto', epsilon=1e-4, cooldown=0,
+                          min_lr=0)]
     return callbacks
 
 
@@ -198,9 +198,10 @@ def generate_train_batch(data_bins, batch_size):
         images = []
         steerings = []
 
-        for i in range(batch_size):
-            n = randint(0, len(data_bins) - 1)
-            (image_names, measurements) = data_bins[n]
+        while len(images) < batch_size:
+            rand_index = randint(0, len(data_bins) - 1)
+            (image_names, measurements) = data_bins[rand_index]
+
             if len(image_names) < 1:
                 continue
 
@@ -214,12 +215,11 @@ def generate_train_batch(data_bins, batch_size):
             steerings.append(steering)
 
             # flip about each second image horizontal
-            if abs(steering) > 0.30:
+            if abs(steering) > 0.35:
                 images.append(flip_horizontal(image))
                 steerings.append(-steering)
 
-        shuffle(np.array(images), np.array(steerings))
-        yield np.array(images)[:batch_size], np.array(steerings)[:batch_size]
+        yield shuffle(np.array(images), np.array(steerings))
 
 
 def generate_validation_batch(X_data, y_data, batch_size):
@@ -228,9 +228,9 @@ def generate_validation_batch(X_data, y_data, batch_size):
         steerings = []
 
         shuffle(X_data, y_data)
-        rand_indexes = sample(range(len(X_valid)), batch_size // 2)
 
-        for rand_index in rand_indexes:
+        while len(images) < batch_size:
+            rand_index = randint(0, len(batch_size) - 1)
             image_name = X_data[rand_index]
             steering = y_data[rand_index][0]
 
@@ -240,7 +240,7 @@ def generate_validation_batch(X_data, y_data, batch_size):
             steerings.append(steering)
 
             # flip about each second image horizontal
-            if abs(steering) > 0.30:
+            if abs(steering) > 0.35:
                 images.append(flip_horizontal(image))
                 steerings.append(-steering)
 
