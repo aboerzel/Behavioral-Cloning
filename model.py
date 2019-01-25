@@ -1,6 +1,6 @@
 import argparse
 import os
-from random import sample
+from random import sample, randint
 
 import cv2
 import matplotlib.pyplot as plt
@@ -125,9 +125,10 @@ print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
                                                    config.STEERING_CORRECTION)
 
-plt.hist(measurements[:, 0], bins=21)
-plt.savefig('./examples/steering_distribution_before.png')
-plt.show()
+
+# plt.hist(measurements[:, 0], bins=21)
+# plt.savefig('./examples/steering_distribution_before.png')
+# plt.show()
 
 
 def distribute_data(image_names, measurements):
@@ -135,7 +136,7 @@ def distribute_data(image_names, measurements):
     # max = int(np.median(num_hist))
     max = int(np.average(num_hist))
 
-    #max = 1000
+    # max = 1000
 
     for i in range(len(num_hist)):
         if num_hist[i] > max:
@@ -149,14 +150,22 @@ def distribute_data(image_names, measurements):
     return image_names, measurements
 
 
-image_names, measurements = distribute_data(image_names, measurements)
+# image_names, measurements = distribute_data(image_names, measurements)
 
-plt.hist(np.array(measurements)[:, 0], bins=21)
-plt.savefig('./examples/steering_distribution_after.png')
-plt.show()
+# plt.hist(np.array(measurements)[:, 0], bins=21)
+# plt.savefig('./examples/steering_distribution_after.png')
+# plt.show()
 
 # split into train and validation data
 X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.20, shuffle=True)
+
+num_bins = 20
+num_hist, idx_hist = np.histogram(y_train[:, 0], num_bins)
+data_bins = []
+
+for i in range(num_bins):
+    match_idx = np.where((y_train[:, 0] >= idx_hist[i]) & (y_train[:, 0] < idx_hist[i + 1]))[0]
+    data_bins.append((X_train[match_idx], y_train[match_idx]))
 
 
 def read_image(filename):
@@ -210,19 +219,22 @@ def flip_horizontal(image):
     return cv2.flip(image, 1)
 
 
-def generate_train_batch(image_names, measurements, batch_size, train_mode):
+def generate_train_batch(data_bins, batch_size):
     while True:
         images = []
         steerings = []
 
-        image_names, measurements = shuffle(image_names, measurements)
-
         for i in range(batch_size):
-            image = preprocess_image(read_image(image_names[i]))
-            steering = measurements[i]
+            n = randint(0, len(data_bins) - 1)
+            (image_names, measurements) = data_bins[n]
+            if len(image_names) < 1:
+                continue
 
-            if train_mode:
-                image, steering = random_distort(image, steering)
+            sample_ind = randint(0, len(image_names)-1)
+            image_name = image_names[sample_ind]
+            steering = measurements[sample_ind][0]
+            image = preprocess_image(read_image(image_name))
+            image, steering = random_distort(image, steering)
 
             images.append(image)
             steerings.append(steering)
@@ -236,8 +248,33 @@ def generate_train_batch(image_names, measurements, batch_size, train_mode):
         yield np.array(images)[:batch_size], np.array(steerings)[:batch_size]
 
 
-train_generator = generate_train_batch(X_train, y_train[:, 0], args['batch_size'], True)
-val_generator = generate_train_batch(X_valid, y_valid[:, 0], args['batch_size'], False)
+def generate_validation_batch(X_data, y_data, batch_size):
+    while True:
+        images = []
+        steerings = []
+
+        shuffle(X_data, y_data)
+        rand_indexes = sample(range(len(X_valid)), batch_size // 2)
+
+        for rand_index in rand_indexes:
+            image_name = X_data[rand_index]
+            steering = y_data[rand_index][0]
+
+            image = preprocess_image(read_image(image_name))
+
+            images.append(image)
+            steerings.append(steering)
+
+            # flip about each second image horizontal
+            if abs(steering) > 0.30:
+                images.append(flip_horizontal(image))
+                steerings.append(-steering)
+
+        yield shuffle(np.array(images), np.array(steerings))
+
+
+train_generator = generate_train_batch(data_bins, args['batch_size'])
+val_generator = generate_validation_batch(X_valid, y_valid, args['batch_size'])
 
 print("[INFO] create model...")
 model = Nvidia.build(Normalization.build(IMAGE_SHAPE))
