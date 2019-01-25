@@ -230,7 +230,7 @@ def generate_validation_batch(X_data, y_data, batch_size):
         shuffle(X_data, y_data)
 
         while len(images) < batch_size:
-            rand_index = randint(0, len(batch_size) - 1)
+            rand_index = randint(0, batch_size - 1)
             image_name = X_data[rand_index]
             steering = y_data[rand_index][0]
 
