@@ -14,9 +14,10 @@ IMAGE_DEPTH = 3
 
 # training parameter
 BATCH_SIZE = 128
-NUM_EPOCHS = 150
+NUM_EPOCHS = 20
 LEARNING_RATE = 1.0e-4
 
 # steering correction for left and right camera
 STEERING_CORRECTION = 0.25
 
+NUM_DATA_BINS = 25
