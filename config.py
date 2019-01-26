@@ -20,4 +20,5 @@ LEARNING_RATE = 1.0e-4
 # steering correction for left and right camera
 STEERING_CORRECTION = 0.25
 
-NUM_DATA_BINS = 25
+# number of bins for data distribution
+NUM_DATA_BINS = 20

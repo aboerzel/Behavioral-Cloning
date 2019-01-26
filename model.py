@@ -30,12 +30,12 @@ print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
                                                    config.STEERING_CORRECTION)
 
-# plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
-# plt.savefig('./examples/steering_distribution.png')
-# plt.show()
+#plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
+#plt.savefig('./examples/steering_distribution.png')
+#plt.show()
 
 # split into train and validation data
-X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.2, shuffle=True)
+X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.05, shuffle=True)
 
 num_hist, idx_hist = np.histogram(y_train[:, 0], config.NUM_DATA_BINS)
 data_bins = []
@@ -60,16 +60,16 @@ def preprocess_image(img):
     return new_img
 
 
-def random_distort(img, angle):
+def random_distort(img):
     new_img = img.astype(float)
 
     # random brightness - the mask bit keeps values from going beyond (0,255)
-    # value = np.random.randint(-28, 28)
-    # if value > 0:
-    #     mask = (new_img[:, :, 0] + value) > 255
-    # if value <= 0:
-    #     mask = (new_img[:, :, 0] + value) < 0
-    # new_img[:, :, 0] += np.where(mask, 0, value)
+    value = np.random.randint(-28, 28)
+    if value > 0:
+        mask = (new_img[:, :, 0] + value) > 255
+    if value <= 0:
+        mask = (new_img[:, :, 0] + value) < 0
+    new_img[:, :, 0] += np.where(mask, 0, value)
 
     # random shadow - full height, random left/right side, random darkening
     # h, w = new_img.shape[0:2]
@@ -80,7 +80,7 @@ def random_distort(img, angle):
     # else:
     #     new_img[:, mid:w, 0] *= factor
 
-    return new_img.astype(np.uint8), angle
+    return new_img.astype(np.uint8)
 
 
 def shift_horizontal(img, angle):
@@ -94,8 +94,8 @@ def shift_horizontal(img, angle):
     return img, angle + angle_adj
 
 
-def flip_horizontal(image):
-    return cv2.flip(image, 1)
+def flip_horizontal(img):
+    return cv2.flip(img, 1)
 
 
 def generate_train_batch(data_bins, batch_size):
@@ -110,7 +110,6 @@ def generate_train_batch(data_bins, batch_size):
             n += 1
 
             (image_names, measurements) = data_bins[bin_index]
-
             if len(image_names) < 1:
                 continue
 
@@ -118,6 +117,7 @@ def generate_train_batch(data_bins, batch_size):
             image_name = image_names[sample_ind]
             steering = measurements[sample_ind][0]
             image = preprocess_image(read_image(image_name))
+            image = random_distort(image)
             image, steering = shift_horizontal(image, steering)
 
             images.append(image)
@@ -236,9 +236,9 @@ model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
 
 print("[INFO] train model...")
 H = model.fit_generator(train_generator,
-                        steps_per_epoch=1000,
+                        steps_per_epoch=2000,
                         validation_data=val_generator,
-                        validation_steps=200,
+                        validation_steps=len(X_valid),
                         epochs=args['epochs'],
                         callbacks=get_callbacks())
 
