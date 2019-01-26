@@ -66,7 +66,7 @@ def random_brightness(img):
     value = np.random.randint(-28, 28)
     if value > 0:
         mask = (new_img[:, :, 0] + value) > 255
-    if value <= 0:
+    else:
         mask = (new_img[:, :, 0] + value) < 0
     new_img[:, :, 0] += np.where(mask, 0, value)
     return new_img.astype(np.uint8)
@@ -196,7 +196,6 @@ class Nvidia:
 def get_callbacks():
     model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
-        # TensorBoard(log_dir="logs".format()),
         EarlyStopping(monitor='val_loss', min_delta=0, patience=5, mode='auto', verbose=1),
         ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
         ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=3, mode='auto',
@@ -226,9 +225,9 @@ model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
 
 print("[INFO] train model...")
 H = model.fit_generator(train_generator,
-                        steps_per_epoch=len(X_train) // args['batch_size'] * 3,
+                        steps_per_epoch=len(X_train) // args['batch_size'] * 4,
                         validation_data=val_generator,
-                        validation_steps=len(X_valid) // args['batch_size'] * 3,
+                        validation_steps=len(X_valid) // args['batch_size'] * 4,
                         epochs=args['epochs'],
                         callbacks=get_callbacks())
 
