@@ -6,7 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, BatchNormalization
+from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, BatchNormalization, Cropping2D
 from keras.models import Sequential
 from keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
@@ -32,8 +32,9 @@ class Normalization:
     def build(input_shape):
         model = Sequential()
         # normalize and mean centering between -0.5 and +0.5
-        model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))
-        # model.add(Lambda(lambda x: (x / 127.5) - 1.0, input_shape=input_shape))
+        # model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))
+        model.add(Lambda(lambda x: (x / 127.5) - 1.0, input_shape=input_shape))
+        model.add(Cropping2D(cropping=((50, 20), (0, 0))))  # remove the sky and the car front
         return model
 
 
@@ -60,12 +61,15 @@ class Nvidia:
         base_model.add(Dense(100))
         base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
+        base_model.add(Dropout(0.25))
         base_model.add(Dense(50))
         base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
+        base_model.add(Dropout(0.25))
         base_model.add(Dense(10))
         base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
+        # base_model.add(Dropout(0.25))
         base_model.add(Dense(1))
         return base_model
 
@@ -148,13 +152,14 @@ def read_image(filename):
 
 def preprocess_image(img):
     # crop region of interest
-    new_img = img[50:140, :, :]
+    # new_img = img[50:140, :, :]
     # apply little blur
-    new_img = cv2.GaussianBlur(new_img, (3, 3), 0)
+    # new_img = cv2.GaussianBlur(new_img, (3, 3), 0)
     # scale to 66x200x3 (same as nVidia)
-    new_img = cv2.resize(new_img, (config.IMAGE_HEIGHT, config.IMAGE_WIDTH), interpolation=cv2.INTER_AREA)
+    # new_img = cv2.resize(new_img, (config.IMAGE_HEIGHT, config.IMAGE_WIDTH), interpolation=cv2.INTER_AREA)
     # convert to YUV color space (as nVidia paper suggests)
-    new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2YUV)
+    # new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2YUV)
+    new_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     return new_img
 
 
@@ -162,21 +167,21 @@ def random_distort(img, angle):
     new_img = img.astype(float)
 
     # random brightness - the mask bit keeps values from going beyond (0,255)
-    value = np.random.randint(-28, 28)
-    if value > 0:
-        mask = (new_img[:, :, 0] + value) > 255
-    if value <= 0:
-        mask = (new_img[:, :, 0] + value) < 0
-    new_img[:, :, 0] += np.where(mask, 0, value)
+    # value = np.random.randint(-28, 28)
+    # if value > 0:
+    #     mask = (new_img[:, :, 0] + value) > 255
+    # if value <= 0:
+    #     mask = (new_img[:, :, 0] + value) < 0
+    # new_img[:, :, 0] += np.where(mask, 0, value)
 
     # random shadow - full height, random left/right side, random darkening
-    h, w = new_img.shape[0:2]
-    mid = np.random.randint(0, w)
-    factor = np.random.uniform(0.6, 0.8)
-    if np.random.rand() > .5:
-        new_img[:, 0:mid, 0] *= factor
-    else:
-        new_img[:, mid:w, 0] *= factor
+    # h, w = new_img.shape[0:2]
+    # mid = np.random.randint(0, w)
+    # factor = np.random.uniform(0.6, 0.8)
+    # if np.random.rand() > .5:
+    #     new_img[:, 0:mid, 0] *= factor
+    # else:
+    #     new_img[:, mid:w, 0] *= factor
 
     # randomly shift horizon
     h, w, _ = new_img.shape
@@ -198,9 +203,13 @@ def generate_train_batch(data_bins, batch_size):
         images = []
         steerings = []
 
+        bin_indexes = shuffle(range(len(data_bins)))
+        n = 0
         while len(images) < batch_size:
-            rand_index = randint(0, len(data_bins) - 1)
-            (image_names, measurements) = data_bins[rand_index]
+            bin_index = bin_indexes[n % len(bin_indexes)]
+            n += 1
+
+            (image_names, measurements) = data_bins[bin_index]
 
             if len(image_names) < 1:
                 continue
@@ -228,11 +237,11 @@ def generate_validation_batch(X_data, y_data, batch_size):
         steerings = []
 
         shuffle(X_data, y_data)
-
+        n = 0
         while len(images) < batch_size:
-            rand_index = randint(0, batch_size - 1)
-            image_name = X_data[rand_index]
-            steering = y_data[rand_index][0]
+            image_name = X_data[n]
+            steering = y_data[n][0]
+            n += 1
 
             image = preprocess_image(read_image(image_name))
 

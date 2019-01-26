@@ -56,11 +56,11 @@ def preprocess_image(img):
     # crop region of interest
     new_img = img[50:140, :, :]
     # apply little blur
-    new_img = cv2.GaussianBlur(new_img, (3, 3), 0)
+    #new_img = cv2.GaussianBlur(new_img, (3, 3), 0)
     # scale to 66x200x3 (same as nVidia)
-    new_img = cv2.resize(new_img, (config.IMAGE_HEIGHT, config.IMAGE_WIDTH), interpolation=cv2.INTER_AREA)
+    #new_img = cv2.resize(new_img, (config.IMAGE_HEIGHT, config.IMAGE_WIDTH), interpolation=cv2.INTER_AREA)
     # convert to YUV color space (as nVidia paper suggests)
-    new_img = cv2.cvtColor(new_img, cv2.COLOR_RGB2YUV)
+    #new_img = cv2.cvtColor(new_img, cv2.COLOR_RGB2YUV)
     return new_img
 
 
@@ -77,8 +77,8 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
-        image = preprocess_image(image_array)
-        steering_angle = float(model.predict(image[None, :, :, :], batch_size=1))
+        #image = preprocess_image(image_array)
+        steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
 
         throttle = controller.update(float(speed))
 
@@ -89,7 +89,8 @@ def telemetry(sid, data):
         if args.image_folder != '':
             timestamp = datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]
             image_filename = os.path.join(args.image_folder, timestamp)
-            cv2.imwrite('{}.jpg'.format(image_filename), cv2.cvtColor(image, cv2.COLOR_YUV2BGR))
+            image.save('{}.jpg'.format(image_filename))
+            #cv2.imwrite('{}.jpg'.format(image_filename), cv2.cvtColor(image, cv2.COLOR_YUV2BGR))
 
     else:
         # NOTE: DON'T EDIT THIS.
