@@ -8,8 +8,8 @@ DRIVING_LOG = "driving_log.csv"
 OUTPUT_PATH = "output"
 
 # network image size
-IMAGE_WIDTH = 160
-IMAGE_HEIGHT = 320
+IMAGE_WIDTH = 200
+IMAGE_HEIGHT = 66
 IMAGE_DEPTH = 3
 
 # training parameter
@@ -18,5 +18,5 @@ NUM_EPOCHS = 150
 LEARNING_RATE = 1.0e-4
 
 # steering correction for left and right camera
-STEERING_CORRECTION = 0.20
+STEERING_CORRECTION = 0.25
 

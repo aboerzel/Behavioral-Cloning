@@ -24,17 +24,15 @@ args = vars(ap.parse_args())
 
 data_folder = args['datapath']
 
-IMAGE_SHAPE = (config.IMAGE_WIDTH, config.IMAGE_HEIGHT, config.IMAGE_DEPTH)
+IMAGE_SHAPE = (config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH)
 
 
 class Normalization:
     @staticmethod
     def build(input_shape):
         model = Sequential()
-        # normalize and mean centering between -0.5 and +0.5
-        # model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))
+        # normalize and mean centering between -1.0 and +1.0
         model.add(Lambda(lambda x: (x / 127.5) - 1.0, input_shape=input_shape))
-        model.add(Cropping2D(cropping=((50, 20), (0, 0))))  # remove the sky and the car front
         return model
 
 
@@ -61,15 +59,15 @@ class Nvidia:
         base_model.add(Dense(100))
         base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        base_model.add(Dropout(0.25))
+        base_model.add(Dropout(0.5))
         base_model.add(Dense(50))
         base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        base_model.add(Dropout(0.25))
+        base_model.add(Dropout(0.5))
         base_model.add(Dense(10))
         base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        # base_model.add(Dropout(0.25))
+        base_model.add(Dropout(0.5))
         base_model.add(Dense(1))
         return base_model
 
@@ -135,7 +133,7 @@ def distribute_data(image_names, measurements):
 # plt.show()
 
 # split into train and validation data
-X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.20, shuffle=True)
+X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.15, shuffle=True)
 
 num_bins = 20
 num_hist, idx_hist = np.histogram(y_train[:, 0], num_bins)
@@ -152,14 +150,13 @@ def read_image(filename):
 
 def preprocess_image(img):
     # crop region of interest
-    # new_img = img[50:140, :, :]
+    new_img = img[50:140, :, :]
     # apply little blur
-    # new_img = cv2.GaussianBlur(new_img, (3, 3), 0)
+    new_img = cv2.GaussianBlur(new_img, (3, 3), 0)
     # scale to 66x200x3 (same as nVidia)
-    # new_img = cv2.resize(new_img, (config.IMAGE_HEIGHT, config.IMAGE_WIDTH), interpolation=cv2.INTER_AREA)
+    new_img = cv2.resize(new_img, (config.IMAGE_WIDTH, config.IMAGE_HEIGHT), interpolation=cv2.INTER_AREA)
     # convert to YUV color space (as nVidia paper suggests)
-    # new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2YUV)
-    new_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2YUV)
     return new_img
 
 
@@ -183,7 +180,7 @@ def random_distort(img, angle):
     # else:
     #     new_img[:, mid:w, 0] *= factor
 
-    # randomly shift horizon
+    # randomly shift horizontal
     h, w, _ = new_img.shape
     horizon = 2 * h / 5
     v_shift = np.random.randint(-h / 8, h / 8)
@@ -192,6 +189,17 @@ def random_distort(img, angle):
     M = cv2.getPerspectiveTransform(pts1, pts2)
     new_img = cv2.warpPerspective(new_img, M, (w, h), borderMode=cv2.BORDER_REPLICATE)
     return new_img.astype(np.uint8), angle
+
+
+def image_shift(img, angle):
+    # Shift image and transform steering angle
+    trans_range = 20
+    shift_x = trans_range * np.random.uniform() - trans_range / 2
+    shift_y = 40 * np.random.uniform() - 40 / 2
+    M = np.float32([[1, 0, shift_x], [0, 1, shift_y]])
+    img = cv2.warpAffine(img, M, (img.shape[1], img.shape[0]))
+    angle_adj = shift_x / trans_range * 2 * 0.2
+    return img, angle + angle_adj
 
 
 def flip_horizontal(image):
@@ -218,13 +226,12 @@ def generate_train_batch(data_bins, batch_size):
             image_name = image_names[sample_ind]
             steering = measurements[sample_ind][0]
             image = preprocess_image(read_image(image_name))
-            image, steering = random_distort(image, steering)
+            image, steering = image_shift(image, steering)
 
             images.append(image)
             steerings.append(steering)
 
-            # flip about each second image horizontal
-            if abs(steering) > 0.35:
+            if abs(steering) > 0.3:
                 images.append(flip_horizontal(image))
                 steerings.append(-steering)
 
@@ -248,8 +255,7 @@ def generate_validation_batch(X_data, y_data, batch_size):
             images.append(image)
             steerings.append(steering)
 
-            # flip about each second image horizontal
-            if abs(steering) > 0.35:
+            if abs(steering) > 0.3:
                 images.append(flip_horizontal(image))
                 steerings.append(-steering)
 
@@ -267,10 +273,10 @@ model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
 
 print("[INFO] train model...")
 H = model.fit_generator(train_generator,
-                        steps_per_epoch=len(X_train) // args['batch_size'],
+                        steps_per_epoch=1000,  # len(X_train) // args['batch_size'],
                         validation_data=val_generator,
-                        validation_steps=len(X_valid) // args['batch_size'],
-                        epochs=args['epochs'],
+                        validation_steps=150,
+                        epochs=5,
                         callbacks=get_callbacks())
 
 plot_and_save_train_history(H)

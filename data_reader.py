@@ -20,8 +20,8 @@ def read_samples_from_file(driving_log_filepath, steering_correction):
             brake = float(line[5])
             speed = float(line[6])
 
-            # skip if speed is 0 because it's not representative for driving behavior
-            if abs(speed) <= 0:
+            # skip if speed is less than 0.1 because it's not representative for driving behavior
+            if abs(speed) < 0.1:
                 continue
 
             image_paths.extend([center, left, right])
