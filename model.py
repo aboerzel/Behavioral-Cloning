@@ -6,7 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, BatchNormalization
+from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout
 from keras.models import Sequential
 from keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
@@ -30,12 +30,12 @@ print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
                                                    config.STEERING_CORRECTION)
 
-#plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
-#plt.savefig('./examples/steering_distribution.png')
-#plt.show()
+plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
+plt.savefig('./examples/steering_distribution.png')
+plt.show()
 
 # split into train and validation data
-X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.05, shuffle=True)
+X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.20, shuffle=True)
 
 num_hist, idx_hist = np.histogram(y_train[:, 0], config.NUM_DATA_BINS)
 data_bins = []
@@ -60,9 +60,8 @@ def preprocess_image(img):
     return new_img
 
 
-def random_distort(img):
+def random_brightness(img):
     new_img = img.astype(float)
-
     # random brightness - the mask bit keeps values from going beyond (0,255)
     value = np.random.randint(-28, 28)
     if value > 0:
@@ -70,16 +69,6 @@ def random_distort(img):
     if value <= 0:
         mask = (new_img[:, :, 0] + value) < 0
     new_img[:, :, 0] += np.where(mask, 0, value)
-
-    # random shadow - full height, random left/right side, random darkening
-    # h, w = new_img.shape[0:2]
-    # mid = np.random.randint(0, w)
-    # factor = np.random.uniform(0.6, 0.8)
-    # if np.random.rand() > .5:
-    #     new_img[:, 0:mid, 0] *= factor
-    # else:
-    #     new_img[:, mid:w, 0] *= factor
-
     return new_img.astype(np.uint8)
 
 
@@ -117,29 +106,29 @@ def generate_train_batch(data_bins, batch_size):
             image_name = image_names[sample_ind]
             steering = measurements[sample_ind][0]
             image = preprocess_image(read_image(image_name))
-            image = random_distort(image)
+            image = random_brightness(image)
             image, steering = shift_horizontal(image, steering)
 
             images.append(image)
             steerings.append(steering)
 
-            if abs(steering) > 0.3:
+            if abs(steering) > config.FLIP_STEERING_THRESHOLD:
                 images.append(flip_horizontal(image))
                 steerings.append(-steering)
 
         yield shuffle(np.array(images), np.array(steerings))
 
 
-def generate_validation_batch(X_data, y_data, batch_size):
+def generate_validation_batch(image_mames, measurements, batch_size):
     while True:
         images = []
         steerings = []
 
-        shuffle(X_data, y_data)
+        shuffle(image_mames, measurements)
         n = 0
         while len(images) < batch_size:
-            image_name = X_data[n]
-            steering = y_data[n][0]
+            image_name = image_mames[n]
+            steering = measurements[n][0]
             n += 1
 
             image = preprocess_image(read_image(image_name))
@@ -147,7 +136,7 @@ def generate_validation_batch(X_data, y_data, batch_size):
             images.append(image)
             steerings.append(steering)
 
-            if abs(steering) > 0.3:
+            if abs(steering) > config.FLIP_STEERING_THRESHOLD:
                 images.append(flip_horizontal(image))
                 steerings.append(-steering)
 
@@ -171,34 +160,35 @@ class Nvidia:
     @staticmethod
     def build(base_model):
         base_model.add(Conv2D(24, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
+
         base_model.add(Conv2D(36, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
+
         base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
+
         base_model.add(Conv2D(64, (3, 3)))
-        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
+
         base_model.add(Conv2D(64, (3, 3)))
-        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
+
         base_model.add(Dropout(0.5))
+
         base_model.add(Flatten())
+
         base_model.add(Dense(100))
-        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        base_model.add(Dropout(0.5))
+
         base_model.add(Dense(50))
-        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        base_model.add(Dropout(0.5))
+
         base_model.add(Dense(10))
-        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
-        base_model.add(Dropout(0.5))
+
+        base_model.add(Dropout(0.25))
+
         base_model.add(Dense(1))
         return base_model
 
@@ -207,10 +197,10 @@ def get_callbacks():
     model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
         # TensorBoard(log_dir="logs".format()),
-        EarlyStopping(monitor='val_loss', min_delta=0, patience=4, mode='auto', verbose=1),
+        EarlyStopping(monitor='val_loss', min_delta=0, patience=5, mode='auto', verbose=1),
         ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
-        ReduceLROnPlateau(monitor='val_loss', factor=0.1, patience=2, verbose=1, mode='auto', epsilon=1e-4, cooldown=0,
-                          min_lr=0)]
+        ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=3, mode='auto',
+                          epsilon=0.0001, cooldown=0, min_lr=0, verbose=1)]
     return callbacks
 
 
@@ -236,9 +226,9 @@ model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
 
 print("[INFO] train model...")
 H = model.fit_generator(train_generator,
-                        steps_per_epoch=2000,
+                        steps_per_epoch=len(X_train) // args['batch_size'] * 3,
                         validation_data=val_generator,
-                        validation_steps=len(X_valid),
+                        validation_steps=len(X_valid) // args['batch_size'] * 3,
                         epochs=args['epochs'],
                         callbacks=get_callbacks())
 

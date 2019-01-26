@@ -14,11 +14,14 @@ IMAGE_DEPTH = 3
 
 # training parameter
 BATCH_SIZE = 128
-NUM_EPOCHS = 20
+NUM_EPOCHS = 5
 LEARNING_RATE = 1.0e-4
+
+# number of bins for data distribution
+NUM_DATA_BINS = 30
 
 # steering correction for left and right camera
 STEERING_CORRECTION = 0.25
 
-# number of bins for data distribution
-NUM_DATA_BINS = 20
+# flip images only if steering angle greater than this threshold
+FLIP_STEERING_THRESHOLD = 0.3
