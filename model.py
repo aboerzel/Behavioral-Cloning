@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
 import config
-from data_reader import read_samples_from_file, distribute_data
+from data import read_samples_from_file, distribute_data
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--datapath", default=config.DATASET_ROOT_PATH, help="sample driving data path")
@@ -31,10 +31,14 @@ image_names, measurements = read_samples_from_file(os.path.join(data_folder, con
                                                    config.STEERING_CORRECTION)
 
 plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
-plt.savefig('./examples/steering_distribution.png')
+plt.savefig('./examples/steering_distribution_before.png')
 plt.show()
 
 image_names, measurements = distribute_data(image_names, measurements)
+
+plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
+plt.savefig('./examples/steering_distribution_after.png')
+plt.show()
 
 # split into train and validation data
 X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.2, shuffle=True)

@@ -17,6 +17,9 @@ BATCH_SIZE = 128
 NUM_EPOCHS = 50
 LEARNING_RATE = 1.0e-4
 
+# number of bins for data distribution
+NUM_DATA_BINS = 20
+
 # steering correction for left and right camera
 STEERING_CORRECTION = 0.25
 
