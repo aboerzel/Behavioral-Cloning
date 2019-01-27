@@ -113,11 +113,8 @@ def generate_train_batch(image_names, measurements, batch_size):
         for image_name, (steering, throttle, brake, speed) in zip(image_names[batch_indexes],
                                                                   measurements[batch_indexes]):
             image = preprocess_image(read_image(image_name))
-            image = random_brightness(image)
-            image, steering = shift_horizontal(image, steering)
-
-            # if abs(steering) > config.FLIP_STEERING_THRESHOLD and np.random.randint(2):
-            #     image, steering = flip_horizontal(image, steering)
+            #image = random_brightness(image)
+            #image, steering = shift_horizontal(image, steering)
 
             images.append(image)
             steerings.append(steering)
@@ -151,15 +148,12 @@ def generate_validation_batch(image_names, measurements, batch_size):
                                                                   measurements[batch_indexes]):
             image = preprocess_image(read_image(image_name))
 
-            # if abs(steering) > config.FLIP_STEERING_THRESHOLD and np.random.randint(2):
-            #     image, steering = flip_horizontal(image, steering)
-
             images.append(image)
             steerings.append(steering)
 
-            # if abs(steering) > config.FLIP_STEERING_THRESHOLD:
-            #     images.append(flip_horizontal(image))
-            #     steerings.append(-steering)
+            if abs(steering) > config.FLIP_STEERING_THRESHOLD:
+                images.append(flip_horizontal(image))
+                steerings.append(-steering)
 
         yield shuffle(np.array(images), np.array(steerings))
 
