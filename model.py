@@ -1,19 +1,19 @@
 import argparse
 import os
-from random import randint
+import random
 
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
 from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout
 from keras.models import Sequential
-from keras.optimizers import Adam
+from keras.optimizers import RMSprop, Adam
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
 import config
-from data_reader import read_samples_from_file
+from data_reader import read_samples_from_file, distribute_data
 
 ap = argparse.ArgumentParser()
 ap.add_argument("-p", "--datapath", default=config.DATASET_ROOT_PATH, help="sample driving data path")
@@ -34,14 +34,15 @@ plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
 plt.savefig('./examples/steering_distribution.png')
 plt.show()
 
-# split into train and validation data
-X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.20, shuffle=True)
+image_names, measurements = distribute_data(image_names, measurements)
 
-num_hist, idx_hist = np.histogram(y_train[:, 0], config.NUM_DATA_BINS)
-data_bins = []
-for i in range(config.NUM_DATA_BINS):
-    match_idx = np.where((y_train[:, 0] >= idx_hist[i]) & (y_train[:, 0] < idx_hist[i + 1]))[0]
-    data_bins.append((X_train[match_idx], y_train[match_idx]))
+# split into train and validation data
+X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.2, shuffle=True)
+
+print('X_train: {}'.format((len(X_train))))
+print('y_train: {}'.format((len(y_train))))
+print('X_valid: {}'.format((len(X_valid))))
+print('y_valid: {}'.format((len(y_valid))))
 
 
 def read_image(filename):
@@ -87,28 +88,33 @@ def flip_horizontal(img):
     return cv2.flip(img, 1)
 
 
-def generate_train_batch(data_bins, batch_size):
+def generate_train_batch(image_names, measurements, batch_size):
+    num_images = len(image_names)
+    indexes = np.asarray(range(num_images))
+    random.shuffle(indexes)
+    batch_index = 0
+
     while True:
         images = []
         steerings = []
 
-        bin_indexes = shuffle(range(len(data_bins)))
-        n = 0
-        while len(images) < batch_size:
-            bin_index = bin_indexes[n % len(bin_indexes)]
-            n += 1
+        if batch_index >= (num_images // batch_size):
+            batch_index = 0
+            random.shuffle(indexes)
 
-            (image_names, measurements) = data_bins[bin_index]
-            if len(image_names) < 1:
-                continue
+        current_index = batch_index * batch_size
+        batch_indexes = indexes[current_index:current_index + batch_size]
+        batch_index += 1
 
-            sample_ind = randint(0, len(image_names) - 1)
-            image_name = image_names[sample_ind]
-            steering = measurements[sample_ind][0]
+        for image_name, (steering, throttle, brake, speed) in zip(image_names[batch_indexes],
+                                                                  measurements[batch_indexes]):
             image = preprocess_image(read_image(image_name))
             image = random_brightness(image)
             image, steering = shift_horizontal(image, steering)
 
+            # if abs(steering) > config.FLIP_STEERING_THRESHOLD and np.random.randint(2):
+            #     image, steering = flip_horizontal(image, steering)
+
             images.append(image)
             steerings.append(steering)
 
@@ -119,31 +125,43 @@ def generate_train_batch(data_bins, batch_size):
         yield shuffle(np.array(images), np.array(steerings))
 
 
-def generate_validation_batch(image_mames, measurements, batch_size):
+def generate_validation_batch(image_names, measurements, batch_size):
+    num_images = len(image_names)
+    indexes = np.asarray(range(num_images))
+    random.shuffle(indexes)
+    batch_index = 0
+
     while True:
         images = []
         steerings = []
 
-        shuffle(image_mames, measurements)
-        n = 0
-        while len(images) < batch_size:
-            image_name = image_mames[n]
-            steering = measurements[n][0]
-            n += 1
+        if batch_index >= (num_images // batch_size):
+            batch_index = 0
+            random.shuffle(indexes)
 
+        current_index = batch_index * batch_size
+        batch_indexes = indexes[current_index:current_index + batch_size]
+        batch_index += 1
+
+        for image_name, (steering, throttle, brake, speed) in zip(image_names[batch_indexes],
+                                                                  measurements[batch_indexes]):
             image = preprocess_image(read_image(image_name))
+
+            # if abs(steering) > config.FLIP_STEERING_THRESHOLD and np.random.randint(2):
+            #     image, steering = flip_horizontal(image, steering)
 
             images.append(image)
             steerings.append(steering)
 
-            if abs(steering) > config.FLIP_STEERING_THRESHOLD:
-                images.append(flip_horizontal(image))
-                steerings.append(-steering)
+            # if abs(steering) > config.FLIP_STEERING_THRESHOLD:
+            #     images.append(flip_horizontal(image))
+            #     steerings.append(-steering)
 
         yield shuffle(np.array(images), np.array(steerings))
 
 
-train_generator = generate_train_batch(data_bins, args['batch_size'])
+train_generator = generate_train_batch(X_train, y_train, args['batch_size'])
+
 val_generator = generate_validation_batch(X_valid, y_valid, args['batch_size'])
 
 
@@ -168,6 +186,8 @@ class Nvidia:
         base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
         base_model.add(Activation('elu'))
 
+        base_model.add(Dropout(0.5))
+
         base_model.add(Conv2D(64, (3, 3)))
         base_model.add(Activation('elu'))
 
@@ -187,8 +207,6 @@ class Nvidia:
         base_model.add(Dense(10))
         base_model.add(Activation('elu'))
 
-        base_model.add(Dropout(0.25))
-
         base_model.add(Dense(1))
         return base_model
 
@@ -196,9 +214,11 @@ class Nvidia:
 def get_callbacks():
     model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
+        TensorBoard(log_dir="logs".format()),
         EarlyStopping(monitor='val_loss', min_delta=0, patience=5, mode='auto', verbose=1),
         ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
-        ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=3, mode='auto',
+        #ModelCheckpoint(model_filepath, verbose=1),
+        ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=2, mode='auto',
                           epsilon=0.0001, cooldown=0, min_lr=0, verbose=1)]
     return callbacks
 
@@ -225,9 +245,9 @@ model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
 
 print("[INFO] train model...")
 H = model.fit_generator(train_generator,
-                        steps_per_epoch=len(X_train) // args['batch_size'] * 4,
+                        steps_per_epoch=len(X_train) // args['batch_size'],
                         validation_data=val_generator,
-                        validation_steps=len(X_valid) // args['batch_size'] * 4,
+                        validation_steps=len(X_valid) // args['batch_size'],
                         epochs=args['epochs'],
                         callbacks=get_callbacks())
 
