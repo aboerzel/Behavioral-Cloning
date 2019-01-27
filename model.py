@@ -59,9 +59,10 @@ def preprocess_image(img):
     # apply little blur
     new_img = cv2.GaussianBlur(new_img, (3, 3), 0)
     # scale to 66x200x3 (same as nVidia)
-    new_img = cv2.resize(new_img, (config.IMAGE_WIDTH, config.IMAGE_HEIGHT), interpolation=cv2.INTER_AREA)
+    #new_img = cv2.resize(new_img, (config.IMAGE_WIDTH, config.IMAGE_HEIGHT), interpolation=cv2.INTER_AREA)
     # convert to YUV color space (as nVidia paper suggests)
     new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2YUV)
+    #new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2RGB)
     return new_img
 
 
@@ -113,7 +114,7 @@ def generate_train_batch(image_names, measurements, batch_size):
         for image_name, (steering, throttle, brake, speed) in zip(image_names[batch_indexes],
                                                                   measurements[batch_indexes]):
             image = preprocess_image(read_image(image_name))
-            #image = random_brightness(image)
+            image = random_brightness(image)
             #image, steering = shift_horizontal(image, steering)
 
             images.append(image)
@@ -212,7 +213,7 @@ class Nvidia:
 def get_callbacks():
     model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
-        TensorBoard(log_dir="logs".format()),
+        #TensorBoard(log_dir="logs".format()),
         EarlyStopping(monitor='val_loss', min_delta=0, patience=5, mode='auto', verbose=1),
         ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
         #ModelCheckpoint(model_filepath, verbose=1),

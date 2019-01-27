@@ -8,13 +8,13 @@ DRIVING_LOG = "driving_log.csv"
 OUTPUT_PATH = "output"
 
 # network image size
-IMAGE_WIDTH = 200
-IMAGE_HEIGHT = 66
+IMAGE_WIDTH = 320
+IMAGE_HEIGHT = 90
 IMAGE_DEPTH = 3
 
 # training parameter
 BATCH_SIZE = 128
-NUM_EPOCHS = 50
+NUM_EPOCHS = 100
 LEARNING_RATE = 1.0e-4
 
 # number of bins for data distribution
