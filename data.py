@@ -1,8 +1,6 @@
 import csv
 
 import numpy as np
-from random import sample
-
 from sklearn.utils import shuffle
 
 import config
@@ -30,33 +28,32 @@ def read_samples_from_file(driving_log_filepath, steering_correction):
             if abs(speed) < 0.1:
                 continue
 
-            image_paths.extend([center, left, right])
-            measurements.extend([(steering, throttle, brake, speed),
-                                 (steering - steering_correction, throttle, brake, speed),
-                                 (steering + steering_correction, throttle, brake, speed)])
+            if speed < -config.STEERING_THRESHOLD:
+                image_paths.append(right)
+                measurements.append((steering + steering_correction, throttle, brake, speed))
+            if speed > config.STEERING_THRESHOLD:
+                image_paths.append(left)
+                measurements.append((steering - steering_correction, throttle, brake, speed))
+            else:
+                image_paths.append(center)
+                measurements.append((steering, throttle, brake, speed))
 
     return np.array(image_paths), np.array(measurements)
 
 
-def distribute_data(image_names, measurements, minimum=500, maximum=1000):
+def distribute_data(image_names, measurements):
     num_hist, idx_hist = np.histogram(measurements[:, 0], config.NUM_DATA_BINS)
 
-    for i in range(len(num_hist)):
-        if num_hist[i] > maximum:
-            # find the index where values fall within the range
-            match_idx = np.where((measurements[:, 0] >= idx_hist[i]) & (measurements[:, 0] < idx_hist[i + 1]))[0]
-            # randomly choose up to the maximum
-            to_be_deleted = sample(list(match_idx), len(match_idx) - maximum)
-            measurements = np.delete(measurements, to_be_deleted, axis=0)
-            image_names = np.delete(image_names, to_be_deleted)
+    max_count = max(num_hist)
 
-        if num_hist[i] < minimum:
+    for i in range(len(num_hist)):
+        if num_hist[i] < max_count:
             # find the index where values fall within the range
             match_idx = np.where((measurements[:, 0] >= idx_hist[i]) & (measurements[:, 0] < idx_hist[i + 1]))[0]
             if len(match_idx) < 1:
                 continue
-            # randomly choose up to the minimum
-            to_be_added = np.random.choice(match_idx, minimum - num_hist[i])
+            # randomly choose up to the max_count
+            to_be_added = np.random.choice(match_idx, max_count - num_hist[i])
             image_names = np.append(image_names, image_names[to_be_added])
             measurements = np.vstack((measurements, measurements[to_be_added]))
 

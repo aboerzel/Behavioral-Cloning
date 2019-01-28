@@ -5,10 +5,10 @@ import random
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau, TensorBoard
-from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
+from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, Cropping2D
 from keras.models import Sequential
-from keras.optimizers import RMSprop, Adam
+from keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
@@ -30,18 +30,22 @@ print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
                                                    config.STEERING_CORRECTION)
 
+print('Sample count: {}'.format((len(image_names))))
+
 plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
 plt.savefig('./examples/steering_distribution_before.png')
 plt.show()
 
 image_names, measurements = distribute_data(image_names, measurements)
 
+print('Sample count: {}'.format((len(image_names))))
+
 plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
 plt.savefig('./examples/steering_distribution_after.png')
 plt.show()
 
 # split into train and validation data
-X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.2, shuffle=True)
+X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.10, shuffle=True)
 
 print('X_train: {}'.format((len(X_train))))
 print('y_train: {}'.format((len(y_train))))
@@ -53,32 +57,43 @@ def read_image(filename):
     return cv2.imread(os.path.join(data_folder, 'IMG', filename))
 
 
-def preprocess_image(img):
-    # crop region of interest
-    new_img = img[50:140, :, :]
-    # apply little blur
-    new_img = cv2.GaussianBlur(new_img, (3, 3), 0)
-    # scale to 66x200x3 (same as nVidia)
-    #new_img = cv2.resize(new_img, (config.IMAGE_WIDTH, config.IMAGE_HEIGHT), interpolation=cv2.INTER_AREA)
-    # convert to YUV color space (as nVidia paper suggests)
-    new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2YUV)
-    #new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2RGB)
+# def preprocess_image(img):
+#     # crop region of interest
+#     new_img = img[50:140, :, :]
+#     # apply little blur
+#     new_img = cv2.GaussianBlur(new_img, (3, 3), 0)
+#     # scale to 66x200x3 (same as nVidia)
+#     # new_img = cv2.resize(new_img, (config.IMAGE_WIDTH, config.IMAGE_HEIGHT), interpolation=cv2.INTER_AREA)
+#     # convert to YUV color space (as nVidia paper suggests)
+#     # new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2YUV)
+#     new_img = cv2.cvtColor(new_img, cv2.COLOR_BGR2RGB)
+#     return new_img
+
+
+# def random_brightness(img):
+#     new_img = img.astype(float)
+#     # random brightness - the mask bit keeps values from going beyond (0,255)
+#     value = np.random.randint(-28, 28)
+#     if value > 0:
+#         mask = (new_img[:, :, 0] + value) > 255
+#     else:
+#         mask = (new_img[:, :, 0] + value) < 0
+#     new_img[:, :, 0] += np.where(mask, 0, value)
+#     return new_img.astype(np.uint8)
+
+
+def random_brightness(image):
+    # Convert 2 HSV colorspace from BGR colorspace
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    # Generate new random brightness
+    rand = random.uniform(0.3, 1.0)
+    hsv[:, :, 2] = rand * hsv[:, :, 2]
+    # Convert back to RGB colorspace
+    new_img = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
     return new_img
 
 
-def random_brightness(img):
-    new_img = img.astype(float)
-    # random brightness - the mask bit keeps values from going beyond (0,255)
-    value = np.random.randint(-28, 28)
-    if value > 0:
-        mask = (new_img[:, :, 0] + value) > 255
-    else:
-        mask = (new_img[:, :, 0] + value) < 0
-    new_img[:, :, 0] += np.where(mask, 0, value)
-    return new_img.astype(np.uint8)
-
-
-def shift_horizontal(img, angle):
+def random_shift(img, angle):
     # Shift image and transform steering angle
     trans_range = 80
     shift_x = trans_range * np.random.uniform() - trans_range / 2
@@ -89,8 +104,8 @@ def shift_horizontal(img, angle):
     return img, angle + angle_adj
 
 
-def flip_horizontal(img):
-    return cv2.flip(img, 1)
+def flip_horizontal(img, angle):
+    return cv2.flip(img, 1), -angle
 
 
 def generate_train_batch(image_names, measurements, batch_size):
@@ -113,16 +128,14 @@ def generate_train_batch(image_names, measurements, batch_size):
 
         for image_name, (steering, throttle, brake, speed) in zip(image_names[batch_indexes],
                                                                   measurements[batch_indexes]):
-            image = preprocess_image(read_image(image_name))
-            image = random_brightness(image)
-            #image, steering = shift_horizontal(image, steering)
+            image = random_brightness(read_image(image_name))
+            image, steering = random_shift(image, steering)
+
+            if random.randint(0, 1) == 1:
+                image, steering = flip_horizontal(image, steering)
 
             images.append(image)
             steerings.append(steering)
-
-            if abs(steering) > config.FLIP_STEERING_THRESHOLD:
-                images.append(flip_horizontal(image))
-                steerings.append(-steering)
 
         yield shuffle(np.array(images), np.array(steerings))
 
@@ -147,14 +160,14 @@ def generate_validation_batch(image_names, measurements, batch_size):
 
         for image_name, (steering, throttle, brake, speed) in zip(image_names[batch_indexes],
                                                                   measurements[batch_indexes]):
-            image = preprocess_image(read_image(image_name))
+            image = read_image(image_name)
+            steering = steering * (1 + np.random.uniform(-0.10, 0.10))
+
+            if random.randint(0, 1) == 1:
+                image, steering = flip_horizontal(image, steering)
 
             images.append(image)
             steerings.append(steering)
-
-            if abs(steering) > config.FLIP_STEERING_THRESHOLD:
-                images.append(flip_horizontal(image))
-                steerings.append(-steering)
 
         yield shuffle(np.array(images), np.array(steerings))
 
@@ -170,6 +183,8 @@ class Normalization:
         model = Sequential()
         # normalize and mean centering between -1.0 and +1.0
         model.add(Lambda(lambda x: (x / 127.5) - 1.0, input_shape=input_shape))
+        # remove the sky and the car front
+        model.add(Cropping2D(cropping=((50, 20), (0, 0))))
         return model
 
 
@@ -185,23 +200,23 @@ class Nvidia:
         base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
         base_model.add(Activation('elu'))
 
-        base_model.add(Dropout(0.5))
-
         base_model.add(Conv2D(64, (3, 3)))
         base_model.add(Activation('elu'))
 
         base_model.add(Conv2D(64, (3, 3)))
         base_model.add(Activation('elu'))
-
-        base_model.add(Dropout(0.5))
 
         base_model.add(Flatten())
 
         base_model.add(Dense(100))
         base_model.add(Activation('elu'))
 
+        base_model.add(Dropout(0.5))
+
         base_model.add(Dense(50))
         base_model.add(Activation('elu'))
+
+        base_model.add(Dropout(0.5))
 
         base_model.add(Dense(10))
         base_model.add(Activation('elu'))
@@ -213,10 +228,8 @@ class Nvidia:
 def get_callbacks():
     model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
-        #TensorBoard(log_dir="logs".format()),
         EarlyStopping(monitor='val_loss', min_delta=0, patience=5, mode='auto', verbose=1),
         ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
-        #ModelCheckpoint(model_filepath, verbose=1),
         ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=2, mode='auto',
                           epsilon=0.0001, cooldown=0, min_lr=0, verbose=1)]
     return callbacks

@@ -9,7 +9,7 @@ OUTPUT_PATH = "output"
 
 # network image size
 IMAGE_WIDTH = 320
-IMAGE_HEIGHT = 90
+IMAGE_HEIGHT = 160
 IMAGE_DEPTH = 3
 
 # training parameter
@@ -18,10 +18,11 @@ NUM_EPOCHS = 100
 LEARNING_RATE = 1.0e-4
 
 # number of bins for data distribution
-NUM_DATA_BINS = 20
+NUM_DATA_BINS = 5
+
+
+STEERING_THRESHOLD = 0.15
 
 # steering correction for left and right camera
 STEERING_CORRECTION = 0.25
 
-# flip images only if steering angle greater than this threshold
-FLIP_STEERING_THRESHOLD = 0.3
