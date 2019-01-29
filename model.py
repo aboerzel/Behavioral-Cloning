@@ -30,6 +30,16 @@ print("[INFO] loading data...")
 image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
                                                    config.STEERING_CORRECTION)
 
+plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
+plt.savefig('./examples/steering_distribution_before.png')
+plt.show()
+
+X_train, y_train = distribute_data(image_names, measurements)
+
+plt.hist(y_train[:, 0], bins=config.NUM_DATA_BINS)
+plt.savefig('./examples/steering_distribution_after.png')
+plt.show()
+
 # split into train and validation data
 X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.10, shuffle=True)
 
@@ -37,18 +47,6 @@ print('X_train: {}'.format((len(X_train))))
 print('y_train: {}'.format((len(y_train))))
 print('X_valid: {}'.format((len(X_valid))))
 print('y_valid: {}'.format((len(y_valid))))
-
-plt.hist(y_train[:, 0], bins=config.NUM_DATA_BINS)
-plt.savefig('./examples/steering_distribution_before.png')
-plt.show()
-
-X_train, y_train = distribute_data(X_train, y_train)
-
-print('Sample count: {}'.format((len(X_train))))
-
-plt.hist(y_train[:, 0], bins=config.NUM_DATA_BINS)
-plt.savefig('./examples/steering_distribution_after.png')
-plt.show()
 
 
 def read_image(filename):
@@ -94,7 +92,7 @@ def generate_train_batch(image_names, measurements, batch_size):
             steering = measurements[rand_ind][0]
 
             image = random_brightness(image)
-            # image, steering = random_shift(image, steering)
+            image, steering = random_shift(image, steering)
 
             if random.randint(0, 1) == 1:
                 image, steering = flip_horizontal(image, steering)
@@ -172,7 +170,7 @@ class Nvidia:
         base_model.add(Dense(50))
         base_model.add(Activation('elu'))
 
-        base_model.add(Dropout(0.5))
+        # base_model.add(Dropout(0.5))
 
         base_model.add(Dense(10))
         base_model.add(Activation('elu'))
@@ -184,9 +182,9 @@ class Nvidia:
 def get_callbacks():
     model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
-        EarlyStopping(monitor='val_acc', min_delta=0, patience=5, mode='auto', verbose=1),
-        ModelCheckpoint(model_filepath, save_best_only=False, verbose=1),
-        ReduceLROnPlateau(monitor='val_acc', factor=0.3, patience=2, mode='auto',
+        EarlyStopping(monitor='val_loss', min_delta=0, patience=5, mode='auto', verbose=1),
+        ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
+        ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=2, mode='auto',
                           epsilon=0.0001, cooldown=0, min_lr=0, verbose=1)]
     return callbacks
 
@@ -196,12 +194,10 @@ def plot_and_save_train_history(H):
     plt.figure()
     plt.plot(np.arange(0, len(H.history["loss"])), H.history["loss"], label="train_loss")
     plt.plot(np.arange(0, len(H.history["val_loss"])), H.history["val_loss"], label="val_loss")
-    plt.plot(np.arange(0, len(H.history["acc"])), H.history["acc"], label="train_acc")
-    plt.plot(np.arange(0, len(H.history["val_acc"])), H.history["val_acc"], label="val_acc")
     plt.title("Mean Squared Error Loss")
     plt.xlabel("Epoch #")
     plt.ylabel("Mean squared error loss")
-    plt.legend(['Training Loss', 'Validation Loss', 'Training Acc', 'Validation Acc'], loc='upper right')
+    plt.legend(['Training Loss', 'Validation Loss'], loc='upper right')
     plt.savefig('./{}/training-history.png'.format(config.OUTPUT_PATH))
     plt.show()
     cv2.waitKey(0)
@@ -211,7 +207,7 @@ print("[INFO] create model...")
 model = Nvidia.build(Normalization.build(IMAGE_SHAPE))
 model.summary()
 
-model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']), metrics=['accuracy'])
+model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
 
 print("[INFO] train model...")
 H = model.fit_generator(train_generator,

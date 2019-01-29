@@ -44,7 +44,7 @@ def read_samples_from_file(driving_log_filepath, steering_correction):
 def distribute_data(image_names, measurements):
     num_hist, idx_hist = np.histogram(measurements[:, 0], config.NUM_DATA_BINS)
 
-    max_count = max(num_hist)
+    max_count = int(max(num_hist) * 0.75)
 
     for i in range(len(num_hist)):
         if num_hist[i] < max_count:
