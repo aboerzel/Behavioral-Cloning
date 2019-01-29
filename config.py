@@ -18,11 +18,9 @@ NUM_EPOCHS = 100
 LEARNING_RATE = 1.0e-4
 
 # number of bins for data distribution
-NUM_DATA_BINS = 5
-
+NUM_DATA_BINS = 21
 
 STEERING_THRESHOLD = 0.15
 
 # steering correction for left and right camera
 STEERING_CORRECTION = 0.25
-

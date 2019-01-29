@@ -14,9 +14,9 @@ def read_samples_from_file(driving_log_filepath, steering_correction):
         next(reader, None)  # skip headers
         for line in reader:
             # camera images
-            center = line[0].split('/')[-1]
-            left = line[1].split('/')[-1]
-            right = line[2].split('/')[-1]
+            center = line[0].strip()
+            left = line[1].strip()
+            right = line[2].strip()
 
             # measurements
             steering = float(line[3])
@@ -28,10 +28,10 @@ def read_samples_from_file(driving_log_filepath, steering_correction):
             if abs(speed) < 0.1:
                 continue
 
-            if speed < -config.STEERING_THRESHOLD:
+            if steering < -config.STEERING_THRESHOLD:
                 image_paths.append(right)
                 measurements.append((steering + steering_correction, throttle, brake, speed))
-            if speed > config.STEERING_THRESHOLD:
+            if steering > config.STEERING_THRESHOLD:
                 image_paths.append(left)
                 measurements.append((steering - steering_correction, throttle, brake, speed))
             else:
