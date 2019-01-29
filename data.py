@@ -26,14 +26,16 @@ def read_samples_from_file(driving_log_filepath, steering_correction):
 
             # skip if speed is less than 0.1 because it's not representative for driving behavior
             if abs(speed) < 0.1:
-                continue
+               continue
 
-            if steering < -config.STEERING_THRESHOLD:
-                image_paths.append(right)
-                measurements.append((steering + steering_correction, throttle, brake, speed))
             if steering > config.STEERING_THRESHOLD:
-                image_paths.append(left)
-                measurements.append((steering - steering_correction, throttle, brake, speed))
+                image_paths.extend([center, left])
+                measurements.extend([(steering, throttle, brake, speed),
+                                     (steering + steering_correction, throttle, brake, speed)])
+            if steering < -config.STEERING_THRESHOLD:
+                image_paths.extend([center, right])
+                measurements.extend([(steering, throttle, brake, speed),
+                                     (steering - steering_correction, throttle, brake, speed)])
             else:
                 image_paths.append(center)
                 measurements.append((steering, throttle, brake, speed))

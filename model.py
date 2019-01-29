@@ -41,7 +41,7 @@ plt.savefig('./examples/steering_distribution_after.png')
 plt.show()
 
 # split into train and validation data
-X_train, X_valid, y_train, y_valid = train_test_split(image_names, measurements, test_size=0.10, shuffle=True)
+X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.10, shuffle=True)
 
 print('X_train: {}'.format((len(X_train))))
 print('y_train: {}'.format((len(y_train))))
@@ -70,9 +70,9 @@ def random_shift(img, angle):
     shift_x = trans_range * np.random.uniform() - trans_range / 2
     shift_y = 40 * np.random.uniform() - 40 / 2
     M = np.float32([[1, 0, shift_x], [0, 1, shift_y]])
-    img = cv2.warpAffine(img, M, (img.shape[1], img.shape[0]))
-    angle_adj = shift_x / trans_range * 2 * 0.2
-    return img, angle + angle_adj
+    new_img = cv2.warpAffine(img, M, (img.shape[1], img.shape[0]))
+    delta_angle = shift_x / trans_range * 2 * 0.2
+    return new_img, angle + delta_angle
 
 
 def flip_horizontal(img, angle):
@@ -80,19 +80,28 @@ def flip_horizontal(img, angle):
 
 
 def generate_train_batch(image_names, measurements, batch_size):
+    num_images = len(image_names)
+    indexes = np.asarray(range(num_images))
+    random.shuffle(indexes)
+    batch_index = 0
+
     while True:
         images = []
         steerings = []
 
-        image_names, measurements = shuffle(image_names, measurements)
+        if batch_index >= (num_images // batch_size):
+            batch_index = 0
+            random.shuffle(indexes)
 
-        for i in range(batch_size):
-            rand_ind = int(np.random.choice(len(image_names), 1))
-            image = read_image(image_names[rand_ind])
-            steering = measurements[rand_ind][0]
+        current_index = batch_index * batch_size
+        batch_indexes = indexes[current_index:current_index + batch_size]
+        batch_index += 1
 
-            image = random_brightness(image)
+        for image_name, (steering, throttle, brake, speed) in zip(image_names[batch_indexes],
+                                                                  measurements[batch_indexes]):
+            image = random_brightness(read_image(image_name))
             image, steering = random_shift(image, steering)
+            # steering = steering * (1 + np.random.uniform(-0.10, 0.10))
 
             if random.randint(0, 1) == 1:
                 image, steering = flip_horizontal(image, steering)
@@ -104,16 +113,26 @@ def generate_train_batch(image_names, measurements, batch_size):
 
 
 def generate_validation_batch(image_names, measurements, batch_size):
+    num_images = len(image_names)
+    indexes = np.asarray(range(num_images))
+    random.shuffle(indexes)
+    batch_index = 0
+
     while True:
         images = []
         steerings = []
 
-        image_names, measurements = shuffle(image_names, measurements)
+        if batch_index >= (num_images // batch_size):
+            batch_index = 0
+            random.shuffle(indexes)
 
-        for i in range(batch_size):
-            rand_ind = int(np.random.choice(len(image_names), 1))
-            image = read_image(image_names[rand_ind])
-            steering = measurements[rand_ind][0]
+        current_index = batch_index * batch_size
+        batch_indexes = indexes[current_index:current_index + batch_size]
+        batch_index += 1
+
+        for image_name, (steering, throttle, brake, speed) in zip(image_names[batch_indexes],
+                                                                  measurements[batch_indexes]):
+            image = read_image(image_name)
 
             if random.randint(0, 1) == 1:
                 image, steering = flip_horizontal(image, steering)
@@ -133,8 +152,6 @@ class Normalization:
     @staticmethod
     def build(input_shape):
         model = Sequential()
-        # normalize and mean centering between -1.0 and +1.0
-        # model.add(Lambda(lambda x: (x / 127.5) - 1.0, input_shape=input_shape))
         # normalize and mean centering between -0.5 and +0.5
         model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))
         # remove the sky and the car front
@@ -170,10 +187,12 @@ class Nvidia:
         base_model.add(Dense(50))
         base_model.add(Activation('elu'))
 
-        # base_model.add(Dropout(0.5))
+        base_model.add(Dropout(0.5))
 
         base_model.add(Dense(10))
         base_model.add(Activation('elu'))
+
+        base_model.add(Dropout(0.5))
 
         base_model.add(Dense(1))
         return base_model
@@ -184,7 +203,7 @@ def get_callbacks():
     callbacks = [
         EarlyStopping(monitor='val_loss', min_delta=0, patience=5, mode='auto', verbose=1),
         ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
-        ReduceLROnPlateau(monitor='val_loss', factor=0.3, patience=2, mode='auto',
+        ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=2, mode='auto',
                           epsilon=0.0001, cooldown=0, min_lr=0, verbose=1)]
     return callbacks
 
