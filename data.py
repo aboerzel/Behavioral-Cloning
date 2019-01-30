@@ -43,7 +43,7 @@ def read_samples_from_file(driving_log_filepath, steering_correction):
     return np.array(image_paths), np.array(measurements)
 
 
-def distribute_data(image_names, measurements):
+def distribute_data(image_paths, measurements):
     num_hist, idx_hist = np.histogram(measurements[:, 0], config.NUM_DATA_BINS)
 
     max_count = int(max(num_hist) * 0.75)
@@ -56,7 +56,7 @@ def distribute_data(image_names, measurements):
                 continue
             # randomly choose up to the max_count
             to_be_added = np.random.choice(match_idx, max_count - num_hist[i])
-            image_names = np.append(image_names, image_names[to_be_added])
+            image_paths = np.append(image_paths, image_paths[to_be_added])
             measurements = np.vstack((measurements, measurements[to_be_added]))
 
-    return shuffle(image_names, measurements)
+    return shuffle(image_paths, measurements)

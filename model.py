@@ -26,36 +26,43 @@ data_folder = args['datapath']
 
 IMAGE_SHAPE = (config.IMAGE_HEIGHT, config.IMAGE_WIDTH, config.IMAGE_DEPTH)
 
+# load data
 print("[INFO] loading data...")
-image_names, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
+image_paths, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
                                                    config.STEERING_CORRECTION)
 
+# show the distribution of the steering angles
 plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
 plt.savefig('./examples/steering_distribution_before.png')
-plt.show()
+# plt.show()
 
-X_train, y_train = distribute_data(image_names, measurements)
+# ensure even distribution of the steering angle
+X_train, y_train = distribute_data(image_paths, measurements)
 
+# show the new distribution of the steering angles
 plt.hist(y_train[:, 0], bins=config.NUM_DATA_BINS)
 plt.savefig('./examples/steering_distribution_after.png')
-plt.show()
+# plt.show()
 
 # split into train and validation data
 X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.10, shuffle=True)
 
+# print the length of the train- and validation data
 print('X_train: {}'.format((len(X_train))))
 print('y_train: {}'.format((len(y_train))))
 print('X_valid: {}'.format((len(X_valid))))
 print('y_valid: {}'.format((len(y_valid))))
 
 
+# read image from dataset
 def read_image(filename):
     return cv2.imread(os.path.join(data_folder, filename))
 
 
-def random_brightness(image):
+# apply random brightness to the image to simulate sunlight, darkness, shadows, ect.
+def random_brightness(img):
     # Convert 2 HSV colorspace from BGR colorspace
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     # Generate new random brightness
     rand = random.uniform(0.3, 1.0)
     hsv[:, :, 2] = rand * hsv[:, :, 2]
@@ -64,8 +71,9 @@ def random_brightness(image):
     return new_img
 
 
+# shift the image randomly horizontal and vertical to simulate a wobble of the camera
 def random_shift(img, angle):
-    # Shift image and transform steering angle
+    # random shift image and transform steering angle
     trans_range = 80
     shift_x = trans_range * np.random.uniform() - trans_range / 2
     shift_y = 40 * np.random.uniform() - 40 / 2
@@ -79,19 +87,19 @@ def flip_horizontal(img, angle):
     return cv2.flip(img, 1), -angle
 
 
-def generate_train_batch(image_names, measurements, batch_size):
+def generate_train_batch(image_paths, measurements, batch_size):
     while True:
-        image_names, measurements = shuffle(image_names, measurements)
+        image_paths, measurements = shuffle(image_paths, measurements)
 
-        for i in range(0, len(image_names), batch_size):
+        for i in range(0, len(image_paths), batch_size):
 
             batch_images = []
             batch_steerings = []
 
-            batch_image_names = image_names[i: i + batch_size]
+            batch_image_paths = image_paths[i: i + batch_size]
             batch_measurements = measurements[i: i + batch_size]
 
-            for image_name, (steering, throttle, brake, speed) in zip(batch_image_names, batch_measurements):
+            for image_name, (steering, throttle, brake, speed) in zip(batch_image_paths, batch_measurements):
                 image = read_image(image_name)
                 image = random_brightness(image)
                 image, steering = random_shift(image, steering)
@@ -105,19 +113,19 @@ def generate_train_batch(image_names, measurements, batch_size):
             yield shuffle(np.array(batch_images), np.array(batch_steerings))
 
 
-def generate_validation_batch(image_names, measurements, batch_size):
+def generate_validation_batch(image_paths, measurements, batch_size):
     while True:
-        image_names, measurements = shuffle(image_names, measurements)
+        image_paths, measurements = shuffle(image_paths, measurements)
 
-        for i in range(0, len(image_names), batch_size):
+        for i in range(0, len(image_paths), batch_size):
 
             batch_images = []
             batch_steerings = []
 
-            batch_image_names = image_names[i: i + batch_size]
+            batch_image_paths = image_paths[i: i + batch_size]
             batch_measurements = measurements[i: i + batch_size]
 
-            for image_name, (steering, throttle, brake, speed) in zip(batch_image_names, batch_measurements):
+            for image_name, (steering, throttle, brake, speed) in zip(batch_image_paths, batch_measurements):
                 image = read_image(image_name)
 
                 if random.randint(0, 1) == 1:
@@ -150,36 +158,24 @@ class Nvidia:
     def build(base_model):
         base_model.add(Conv2D(24, (5, 5), strides=(2, 2)))
         base_model.add(Activation('elu'))
-
         base_model.add(Conv2D(36, (5, 5), strides=(2, 2)))
         base_model.add(Activation('elu'))
-
         base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
         base_model.add(Activation('elu'))
-
         base_model.add(Conv2D(64, (3, 3)))
         base_model.add(Activation('elu'))
-
         base_model.add(Conv2D(64, (3, 3)))
         base_model.add(Activation('elu'))
-
         base_model.add(Flatten())
-
         base_model.add(Dense(100))
         base_model.add(Activation('elu'))
-
         base_model.add(Dropout(0.5))
-
         base_model.add(Dense(50))
         base_model.add(Activation('elu'))
-
         base_model.add(Dropout(0.5))
-
         base_model.add(Dense(10))
         base_model.add(Activation('elu'))
-
         base_model.add(Dropout(0.5))
-
         base_model.add(Dense(1))
         return base_model
 
@@ -187,7 +183,7 @@ class Nvidia:
 def get_callbacks():
     model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
-        EarlyStopping(monitor='val_loss', min_delta=0, patience=5, mode='auto', verbose=1),
+        EarlyStopping(monitor='val_loss', min_delta=0, patience=3, mode='auto', verbose=1),
         ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
         ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=2, mode='auto',
                           epsilon=0.0001, cooldown=0, min_lr=0, verbose=1)]
