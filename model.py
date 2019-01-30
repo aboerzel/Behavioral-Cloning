@@ -36,7 +36,7 @@ plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
 plt.savefig('./examples/steering_distribution_before.png')
 # plt.show()
 
-# ensure even distribution of the steering angle
+# ensure even distribution of the steering angles
 X_train, y_train = distribute_data(image_paths, measurements)
 
 # show the new distribution of the steering angles
@@ -59,6 +59,7 @@ def read_image(filename):
     return cv2.imread(os.path.join(data_folder, filename))
 
 
+# image augmentation methods:
 # apply random brightness to the image to simulate sunlight, darkness, shadows, ect.
 def random_brightness(img):
     # Convert 2 HSV colorspace from BGR colorspace
@@ -83,10 +84,12 @@ def random_shift(img, angle):
     return new_img, angle + delta_angle
 
 
+# flip the image horizontally to simulate the mirror situation
 def flip_horizontal(img, angle):
     return cv2.flip(img, 1), -angle
 
 
+# train generator, uses image augmentation and horizontal flip
 def generate_train_batch(image_paths, measurements, batch_size):
     while True:
         image_paths, measurements = shuffle(image_paths, measurements)
@@ -113,6 +116,7 @@ def generate_train_batch(image_paths, measurements, batch_size):
             yield shuffle(np.array(batch_images), np.array(batch_steerings))
 
 
+# validation generator, uses only horizontal flip, but no further image augmentation
 def generate_validation_batch(image_paths, measurements, batch_size):
     while True:
         image_paths, measurements = shuffle(image_paths, measurements)
@@ -137,12 +141,14 @@ def generate_validation_batch(image_paths, measurements, batch_size):
             yield shuffle(np.array(batch_images), np.array(batch_steerings))
 
 
+# construct the train- and validation generators
 train_generator = generate_train_batch(X_train, y_train, args['batch_size'])
-
 val_generator = generate_validation_batch(X_valid, y_valid, args['batch_size'])
 
 
-class Normalization:
+# base model for image preprocessing.
+# crops the sky and the car front and normalizes the image data between -0.5 and +0.5
+class Preprocessing:
     @staticmethod
     def build(input_shape):
         model = Sequential()
@@ -153,6 +159,7 @@ class Normalization:
         return model
 
 
+# nVidia model, derives from the base model
 class Nvidia:
     @staticmethod
     def build(base_model):
@@ -180,6 +187,10 @@ class Nvidia:
         return base_model
 
 
+# define callbacks
+# - stop if there is no improvement during training
+# - save best model ever trained
+# - auto reduce learning rate if there is no improvement
 def get_callbacks():
     model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
@@ -190,6 +201,7 @@ def get_callbacks():
     return callbacks
 
 
+# plot and save the training history
 def plot_and_save_train_history(H):
     plt.style.use("ggplot")
     plt.figure()
@@ -204,12 +216,14 @@ def plot_and_save_train_history(H):
     cv2.waitKey(0)
 
 
+# construct model
 print("[INFO] create model...")
-model = Nvidia.build(Normalization.build(IMAGE_SHAPE))
+model = Nvidia.build(Preprocessing.build(IMAGE_SHAPE))
 model.summary()
 
 model.compile(loss='mse', optimizer=Adam(lr=args['learning_rate']))
 
+# start training
 print("[INFO] train model...")
 H = model.fit_generator(train_generator,
                         steps_per_epoch=len(X_train) // args['batch_size'],
@@ -218,5 +232,5 @@ H = model.fit_generator(train_generator,
                         epochs=args['epochs'],
                         callbacks=get_callbacks(),
                         verbose=1)
-
+# plot training history
 plot_and_save_train_history(H)
