@@ -20,7 +20,7 @@ LEARNING_RATE = 1.0e-4
 # number of bins for data distribution
 NUM_DATA_BINS = 21
 
-# threshold straight ahead / curves
+# steering threshold between straight-ahead driving and cornering
 STEERING_THRESHOLD = 0.15
 
 # steering correction for left and right camera

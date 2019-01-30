@@ -4,7 +4,6 @@ from datetime import datetime
 import os
 import shutil
 
-import cv2
 import numpy as np
 import socketio
 import eventlet
@@ -17,8 +16,6 @@ from keras.models import load_model
 import h5py
 from keras import __version__ as keras_version
 from scipy import ndimage
-
-import config
 
 sio = socketio.Server()
 app = Flask(__name__)
@@ -52,18 +49,6 @@ set_speed = 9
 controller.set_desired(set_speed)
 
 
-# def preprocess_image(img):
-#     # crop region of interest
-#     new_img = img[50:140, :, :]
-#     # apply little blur
-#     new_img = cv2.GaussianBlur(new_img, (3, 3), 0)
-#     # scale to 66x200x3 (same as nVidia)
-#     #new_img = cv2.resize(new_img, (config.IMAGE_WIDTH, config.IMAGE_HEIGHT), interpolation=cv2.INTER_AREA)
-#     # convert to YUV color space (as nVidia paper suggests)
-#     new_img = cv2.cvtColor(new_img, cv2.COLOR_RGB2YUV)
-#     return new_img
-
-
 @sio.on('telemetry')
 def telemetry(sid, data):
     if data:
@@ -89,7 +74,6 @@ def telemetry(sid, data):
             timestamp = datetime.utcnow().strftime('%Y_%m_%d_%H_%M_%S_%f')[:-3]
             image_filename = os.path.join(args.image_folder, timestamp)
             image.save('{}.jpg'.format(image_filename))
-            # cv2.imwrite('{}.jpg'.format(image_filename), cv2.cvtColor(image, cv2.COLOR_YUV2BGR))
 
     else:
         # NOTE: DON'T EDIT THIS.
@@ -153,9 +137,7 @@ if __name__ == '__main__':
     # On my computer, error CUDA_XXX occurs when the first telemetry call occurs.
     # I was able to prevent the error by making a predictive call on the model once before the telemetry call.
     image = ndimage.imread('../sample_driving_data/IMG/center_2016_12_01_13_30_48_287.jpg')
-    image = cv2.resize(image[50:140, :], (config.IMAGE_WIDTH, config.IMAGE_HEIGHT))
-    image = (image.astype(np.float32) / 127.5) - 1.0
-
+    image = np.asarray(image)
     steering_angle = float(model.predict(np.array([image]), batch_size=1))
     print(steering_angle)
 

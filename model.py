@@ -80,67 +80,53 @@ def flip_horizontal(img, angle):
 
 
 def generate_train_batch(image_names, measurements, batch_size):
-    num_images = len(image_names)
-    indexes = np.asarray(range(num_images))
-    random.shuffle(indexes)
-    batch_index = 0
-
     while True:
-        images = []
-        steerings = []
+        image_names, measurements = shuffle(image_names, measurements)
 
-        if batch_index >= (num_images // batch_size):
-            batch_index = 0
-            random.shuffle(indexes)
+        for i in range(0, len(image_names), batch_size):
 
-        current_index = batch_index * batch_size
-        batch_indexes = indexes[current_index:current_index + batch_size]
-        batch_index += 1
+            batch_images = []
+            batch_steerings = []
 
-        for image_name, (steering, throttle, brake, speed) in zip(image_names[batch_indexes],
-                                                                  measurements[batch_indexes]):
-            image = random_brightness(read_image(image_name))
-            image, steering = random_shift(image, steering)
-            # steering = steering * (1 + np.random.uniform(-0.10, 0.10))
+            batch_image_names = image_names[i: i + batch_size]
+            batch_measurements = measurements[i: i + batch_size]
 
-            if random.randint(0, 1) == 1:
-                image, steering = flip_horizontal(image, steering)
+            for image_name, (steering, throttle, brake, speed) in zip(batch_image_names, batch_measurements):
+                image = read_image(image_name)
+                image = random_brightness(image)
+                image, steering = random_shift(image, steering)
 
-            images.append(image)
-            steerings.append(steering)
+                if random.randint(0, 1) == 1:
+                    image, steering = flip_horizontal(image, steering)
 
-        yield shuffle(np.array(images), np.array(steerings))
+                batch_images.append(image)
+                batch_steerings.append(steering)
+
+            yield shuffle(np.array(batch_images), np.array(batch_steerings))
 
 
 def generate_validation_batch(image_names, measurements, batch_size):
-    num_images = len(image_names)
-    indexes = np.asarray(range(num_images))
-    random.shuffle(indexes)
-    batch_index = 0
-
     while True:
-        images = []
-        steerings = []
+        image_names, measurements = shuffle(image_names, measurements)
 
-        if batch_index >= (num_images // batch_size):
-            batch_index = 0
-            random.shuffle(indexes)
+        for i in range(0, len(image_names), batch_size):
 
-        current_index = batch_index * batch_size
-        batch_indexes = indexes[current_index:current_index + batch_size]
-        batch_index += 1
+            batch_images = []
+            batch_steerings = []
 
-        for image_name, (steering, throttle, brake, speed) in zip(image_names[batch_indexes],
-                                                                  measurements[batch_indexes]):
-            image = read_image(image_name)
+            batch_image_names = image_names[i: i + batch_size]
+            batch_measurements = measurements[i: i + batch_size]
 
-            if random.randint(0, 1) == 1:
-                image, steering = flip_horizontal(image, steering)
+            for image_name, (steering, throttle, brake, speed) in zip(batch_image_names, batch_measurements):
+                image = read_image(image_name)
 
-            images.append(image)
-            steerings.append(steering)
+                if random.randint(0, 1) == 1:
+                    image, steering = flip_horizontal(image, steering)
 
-        yield shuffle(np.array(images), np.array(steerings))
+                    batch_images.append(image)
+                    batch_steerings.append(steering)
+
+            yield shuffle(np.array(batch_images), np.array(batch_steerings))
 
 
 train_generator = generate_train_batch(X_train, y_train, args['batch_size'])
@@ -234,6 +220,7 @@ H = model.fit_generator(train_generator,
                         validation_data=val_generator,
                         validation_steps=len(X_valid) // args['batch_size'],
                         epochs=args['epochs'],
-                        callbacks=get_callbacks())
+                        callbacks=get_callbacks(),
+                        verbose=1)
 
 plot_and_save_train_history(H)
