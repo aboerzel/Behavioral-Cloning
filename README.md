@@ -53,7 +53,7 @@ python drive.py model.h5
 
 The `model.py` file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
 
-The `data.py` file contains the code to load the simulator data from the driving_log.csv file and to align the distribution of the data.
+The `data.py` file contains the code to load the simulator data from the `driving_log.csv` file and to align the distribution of the data.
 
 The `config.py` is used to define some project wide parameters, such as batch size, number of epochs, ect.
 
@@ -81,36 +81,104 @@ The following cropping layer removes the sky and the car front from the image, w
 Each of the 5 convolutional layers has a 1x1 stride, and a 2x2 max pooling operation to reduce spatial resolution. 
 The first 3 convolutional layers use a 5x5 filter while the final 2 use a 3x3 filter as the input dimensionality is reduced.
 
-A batch normalization layer was added to each convolutional layer to accelerate learning and to reduce overfitting, see Sergey Ioffe: [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/pdf/1502.03167.pdf)
-
 After the convolutional layers, a 50% dropout layer was added to prevent overfitting.
 
 For non-linearity, [ELU activations](https://arxiv.org/pdf/1511.07289v1.pdf) are used for each convolutional and each fully connected layer.
 
-The original Nvidia model uses an input size of 66x200x3. I tried that, but with that I did not manage to drive the car a full round in the simulator (currently I do not know exactly why!). 
-So I use the original image size of 160x320x3 as input size for my network. The cropping layer will reduce the size to 90x320x3 before the image is fed to the convolutional layers. 
+The original NVIDIA model uses an input size of 66x200x3. I tried that, but with that I did not manage to drive the car a full round in the simulator (currently I do not know exactly why!). 
+So I use the original image size of 160x320x3 as input size for my network. The cropping layer will reduce the size to 65x320x3 before the image is fed to the convolutional layers. 
+
 Here is a visualization of the final model architecture:
+![alt text][image1]
 
+The implementation can be found in `model.py` lines 151-185.
 
-#### 2. Attempts to reduce overfitting in the model
+#### Attempts to reduce overfitting in the model
+The model was trained and validated on different data sets to ensure that the model was not overfitting (model.py line 48). 
+And the model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
-The model contains dropout layers in order to reduce overfitting (model.py lines 21). 
+I also used image normalization, image cropping and a dropout layer for regularization (model.py lines 151-185).
 
-The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
+Further I used an EarlyStopping-callback to stop the training process automatically if the value-loss has not improved over some epochs. 
+And a ModelCheckpoint-callback to save only the best trained model (model.py lines 192-197). 
 
-#### 3. Model parameter tuning
+#### Model parameter tuning
+Here are the parameters for tuning the model and the training process. 
+The tuning parameters can be adjusted in the `config.py` file.
 
-The model used an adam optimizer, so the learning rate was not tuned manually (model.py line 25).
+* `NUM_EPOCHS` = 20 (Max number of epochs, since early stopping is used)
+* `BATCH_SIZE` = 128
+* `LERNING_RATE` = 1.0e-4
+* `STEERING_CORRECTION` = 0.25
+* `STEERING_THRESHOLD` = 0.15
+* `NUM_DATA_BINS`= 21
 
-#### 4. Appropriate training data
+I used an adam optimizer with an learning rate of 1.0e-4 (model.py line 220). 
 
-Training data was chosen to keep the vehicle driving on the road. I used a combination of center lane driving, recovering from the left and right sides of the road ... 
+Since this is a regression problem I used the MSE (Mean Squared Error) loss function (model.py line 220).
 
-For details about how I created the training data, see the next section. 
+The `STEERING_CORRECTION` is used to adjust the steering angles for the left (+) or right (-) camera images.
 
-### Model Architecture and Training Strategy
+The `STEERING_THRESHOLD` is used to split the driving samples where the car is driving straight ahead or cornering. This is needed for the alignment of the data distribution, explained later.
 
-#### 1. Solution Design Approach
+#### Appropriate training data
+I used the dataset provided by Udacity to train the model, but this data set contains some pitfalls that make it difficult to train a model that lets the car drive a complete lap in the simulator without a breakdown. 
+
+A big problem is the extremely uneven number of records in which the car drives straight ahead (steering angle between -STEERING_THRESHOLD and + STEERING_THRESHOLD) versus the data sets where the car is cornering.
+
+The following diagram shows the distribution of the data by the steering angle:
+•	Histogramm
+
+Another problem is that for some difficult situations, e.g. the bridge with another road surface, few sharp curves or the curve without roadside, only very few records are available compared to the normal cases. Unfortunately, it is hardly possible to identify these records.
+
+To fix the extremely unequal number of data sets with straight-ahead driving and cornering, one could simply delete a randomly selected part of the data records with straight-ahead driving. 
+However, there is the risk that the rare special cases will be deleted, which would mean that the car leaves the road in such a special case. So that's not the solution!
+
+To avoid this problem, I group the data sets based on the steering angle in NUM_DATA_BINS areas between -1 and +1 using a histogram. 
+
+After that, I'll find the group with the most records (that's where the car is driving straight ahead) and fill up each of the other groups with records randomly selected from the same group, up to the number of items of largest group * 0,75. Thus, the distribution of steering angles in the data set is compensated without losing the rare records. However, the disadvantage is that the number of data to be trained has increased massively.
+
+The following diagram shows the distribution of the data by the steering angle, after the adjustment has been made:
+•	Histogramm
+
+The data distribution is done in data.py lines XXX-YYY.
+
+#### Loading Data
+Shuffle Data after loading
+
+Wenn steering angle zwischen - STEERING_THRESHOLD und + STEERING_THRESHOLD (geradeaus) => center image only
+
+Wenn steering angle > +STEERING_THRESHOLD => center image AND left image mit STEERING_CORRECTION + 
+
+Wenn steering angle < - STEERING_THRESHOLD => center image AND right image mit STEERING_CORRECTION – 
+
+The STEERING THRESHOLD was determined by evaluating the histogram.
+
+The STEERING_CORRECTION value was determined by a lot of trial and error.
+
+Split the data in a training set and a validation set. I use only 20% of the records for validation to avoid losing too many special training records. 
+
+#### Image Preprocessing
+BGR => RGB 
+Normalization and Mean-Center data between -0.5 und +0.5
+Cropping ROI 160x320x3 => 90x320x3
+	Beispiel
+
+#### Image Augmentation
+* Random Brightness
+* Random horizontal and vertical shift
+* Flip horizontal
+
+    	Beispiele
+    
+Using generator to generate randomly augmented images for each batch…
+
+	Beispiele Batch
+
+#### Output Video
+* Videos Track 1
+
+---
 
 
 
