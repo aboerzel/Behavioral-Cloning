@@ -5,8 +5,8 @@ import random
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, Cropping2D, BatchNormalization
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, Cropping2D
 from keras.models import Sequential
 from keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
@@ -153,9 +153,9 @@ class Preprocessing:
     def build(input_shape):
         model = Sequential()
         # normalize and mean centering between -0.5 and +0.5
-        model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))
+        model.add(Lambda(lambda x: x / 255 - 0.5, input_shape=input_shape))
         # remove the sky and the car front
-        model.add(Cropping2D(cropping=((50, 20), (0, 0))))
+        model.add(Cropping2D(cropping=((70, 25), (0, 0))))
         return model
 
 
@@ -164,31 +164,23 @@ class Nvidia:
     @staticmethod
     def build(base_model):
         base_model.add(Conv2D(24, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Conv2D(36, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
-        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Conv2D(64, (3, 3)))
         base_model.add(Activation('elu'))
-        base_model.add(BatchNormalization())
         base_model.add(Conv2D(64, (3, 3)))
         base_model.add(Activation('elu'))
-        base_model.add(BatchNormalization())
-        base_model.add(Dropout(0.5))
         base_model.add(Flatten())
+        base_model.add(Dropout(0.5))
         base_model.add(Dense(100))
         base_model.add(Activation('elu'))
-        base_model.add(BatchNormalization())
         base_model.add(Dense(50))
         base_model.add(Activation('elu'))
-        base_model.add(BatchNormalization())
         base_model.add(Dense(10))
         base_model.add(Activation('elu'))
-        base_model.add(BatchNormalization())
         base_model.add(Dense(1))
         return base_model
 
@@ -200,10 +192,8 @@ class Nvidia:
 def get_callbacks():
     model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
-        EarlyStopping(monitor='val_loss', min_delta=0, patience=3, mode='auto', verbose=1),
-        ModelCheckpoint(model_filepath, save_best_only=True, verbose=1),
-        ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=2, mode='auto',
-                          epsilon=0.0001, cooldown=0, min_lr=0, verbose=1)]
+        EarlyStopping(monitor='val_loss', min_delta=0, patience=2, mode='auto', verbose=1),
+        ModelCheckpoint(model_filepath, save_best_only=True, verbose=1)]
     return callbacks
 
 
