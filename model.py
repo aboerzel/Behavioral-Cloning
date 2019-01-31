@@ -153,9 +153,9 @@ class Preprocessing:
     def build(input_shape):
         model = Sequential()
         # normalize and mean centering between -0.5 and +0.5
-        model.add(Lambda(lambda x: (x / 255) - 0.5))
+        model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))
         # remove the sky and the car front
-        model.add(Cropping2D(cropping=((50, 20), (0, 0)), input_shape=input_shape))
+        model.add(Cropping2D(cropping=((50, 20), (0, 0))))
         return model
 
 
