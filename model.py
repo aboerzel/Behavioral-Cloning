@@ -6,7 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
-from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, Cropping2D
+from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, Cropping2D, BatchNormalization
 from keras.models import Sequential
 from keras.optimizers import Adam
 from sklearn.model_selection import train_test_split
@@ -32,20 +32,20 @@ image_paths, measurements = read_samples_from_file(os.path.join(data_folder, con
                                                    config.STEERING_CORRECTION)
 
 # show the distribution of the steering angles
-plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
-plt.savefig('./examples/steering_distribution_before.png')
+# plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
+# plt.savefig('./examples/steering_distribution_before.png')
 # plt.show()
 
 # ensure even distribution of the steering angles
 X_train, y_train = distribute_data(image_paths, measurements)
 
 # show the new distribution of the steering angles
-plt.hist(y_train[:, 0], bins=config.NUM_DATA_BINS)
-plt.savefig('./examples/steering_distribution_after.png')
+# plt.hist(y_train[:, 0], bins=config.NUM_DATA_BINS)
+# plt.savefig('./examples/steering_distribution_after.png')
 # plt.show()
 
 # split into train and validation data
-X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.10, shuffle=True)
+X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.20, shuffle=True)
 
 # print the length of the train- and validation data
 print('X_train: {}'.format((len(X_train))))
@@ -153,9 +153,9 @@ class Preprocessing:
     def build(input_shape):
         model = Sequential()
         # normalize and mean centering between -0.5 and +0.5
-        model.add(Lambda(lambda x: (x / 255) - 0.5, input_shape=input_shape))
+        model.add(Lambda(lambda x: (x / 255) - 0.5))
         # remove the sky and the car front
-        model.add(Cropping2D(cropping=((50, 20), (0, 0))))
+        model.add(Cropping2D(cropping=((50, 20), (0, 0)), input_shape=input_shape))
         return model
 
 
@@ -164,25 +164,31 @@ class Nvidia:
     @staticmethod
     def build(base_model):
         base_model.add(Conv2D(24, (5, 5), strides=(2, 2)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Conv2D(36, (5, 5), strides=(2, 2)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Conv2D(64, (3, 3)))
         base_model.add(Activation('elu'))
+        base_model.add(BatchNormalization())
         base_model.add(Conv2D(64, (3, 3)))
         base_model.add(Activation('elu'))
+        base_model.add(BatchNormalization())
+        base_model.add(Dropout(0.5))
         base_model.add(Flatten())
         base_model.add(Dense(100))
         base_model.add(Activation('elu'))
-        base_model.add(Dropout(0.5))
+        base_model.add(BatchNormalization())
         base_model.add(Dense(50))
         base_model.add(Activation('elu'))
-        base_model.add(Dropout(0.5))
+        base_model.add(BatchNormalization())
         base_model.add(Dense(10))
         base_model.add(Activation('elu'))
-        base_model.add(Dropout(0.5))
+        base_model.add(BatchNormalization())
         base_model.add(Dense(1))
         return base_model
 
