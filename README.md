@@ -16,7 +16,8 @@ The goals / steps of this project are the following:
 [nvidia_model]: ./examples/nVidia_model.png "NVIDIA Model Architecture"
 [distribution_1]: ./examples/steering_distribution_before.png "Steering Distribution Before"
 [distribution_2]: ./examples/steering_distribution_after.png "Steering Distribution After"
-[sample_image]: ./examples/sample_Image.png "Sample Image"
+[sample_image]: ./examples/sample_image.png "Sample Image"
+[cropped_image]: ./examples/cropped_image.png "Sample Image"
 [random_brightness]: ./examples/random_brightness.png "Random Brightness"
 [random_shift]: ./examples/random_shift.png "Random Shift"
 [horizontal_flip]: ./examples/horizontal_flip.png "Horizontal Flip"
@@ -165,16 +166,17 @@ Split the data in a training set and a validation set. I use only 20% of the rec
 BGR => RGB 
 Normalization and Mean-Center data between -0.5 und +0.5
 Cropping ROI 160x320x3 => 90x320x3
-	Beispiel
+
+![alt text][cropped_image]
 
 #### Image Augmentation
-* Random Brightness
+Random Brightness
 ![alt text][random_brightness]
 
-* Random horizontal and vertical shift
+Random horizontal and vertical shift
 ![alt text][random_shift]
 
-* Flip horizontal
+Flip horizontal
 ![alt text][horizontal_flip]
     
 Using generator to generate randomly augmented images for each batch…
