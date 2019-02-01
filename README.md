@@ -171,6 +171,7 @@ Cropping ROI 160x320x3 => 90x320x3
 |-------------|-------------|
 |![][sample_image]|![][cropped_image]|
 
+
 #### Image Augmentation
 Random Brightness
 ![alt text][random_brightness]
