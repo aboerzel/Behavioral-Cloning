@@ -22,9 +22,11 @@ The goals / steps of this project are the following:
 [nvidia_model]: ./examples/nVidia_model.png "NVIDIA Model Architecture"
 [distribution_1]: ./examples/steering_distribution_before.png "Steering Distribution Before"
 [distribution_2]: ./examples/steering_distribution_after.png "Steering Distribution After"
-[image5]: ./examples/placeholder_small.png "Recovery Image"
-[image6]: ./examples/placeholder_small.png "Normal Image"
-[image7]: ./examples/placeholder_small.png "Flipped Image"
+[sample_image]: ./examples/sample_Image.png "Sample Image"
+[random_brightness]: ./examples/random_brightness.png "Random Brightness"
+[random_shift]: ./examples/random_shift.png "Random Shift"
+[horizontal_flip]: ./examples/horizontal_flip.png "Horizontal Flip"
+[train_image_batch]: ./examples/train_image_batch.png "Train Image Batch"
 [train_history]: ./examples/training-history.png "Training History"
 
 ## Rubric Points
@@ -151,7 +153,7 @@ The data distribution is done in [data.py](data.py) lines XXX-YYY.
 #### Loading Data
 Shuffle Data after loading
 
-Wenn steering angle zwischen `-STEERING_THRESHOLD` und `+STEERING_THRESHOLD` (geradeaus) => center image only
+Wenn steering angle zwischen -`STEERING_THRESHOLD` und +`STEERING_THRESHOLD` (geradeaus) => center image only
 
 Wenn steering angle > +STEERING_THRESHOLD => center image AND left image mit STEERING_CORRECTION + 
 
@@ -171,14 +173,17 @@ Cropping ROI 160x320x3 => 90x320x3
 
 #### Image Augmentation
 * Random Brightness
-* Random horizontal and vertical shift
-* Flip horizontal
+![alt text][random_brightness]
 
-    	Beispiele
+* Random horizontal and vertical shift
+![alt text][random_shift]
+
+* Flip horizontal
+![alt text][horizontal_flip]
     
 Using generator to generate randomly augmented images for each batch…
+![alt text][train_image_batch]
 
-	Beispiele Batch
 
 #### Output Video
 * Videos Track 1
