@@ -35,12 +35,13 @@ The goals / steps of this project are the following:
 #### 1. Submission includes all required files and can be used to run the simulator in autonomous mode
 
 My project includes the following files:
-* model.py containing the script to create and train the model
-* data.py containing the script to load and distribute the data
-* config.py defines global parameters for the project
-* drive.py for driving the car in autonomous mode
-* model.h5 containing a trained convolution neural network
-* README.md summarizing the results
+* [model.py](model.py) containing the script to create and train the model
+* [data.py](data.py) containing the script to load and distribute the data
+* [config.py](config.py) defines global parameters for the project
+* [drive.py](drive.py) for driving the car in autonomous mode
+* `model.h5` the trained convolution neural network
+* [video.mp4](video.mp4) video of the recordings by drive.py. while the car is driving track-1 in the simulator.
+* `README.md` summarizing the results
 
 
 #### 2. Submission includes functional code
@@ -51,11 +52,11 @@ python drive.py model.h5
 
 #### 3. Submission code is usable and readable
 
-The `model.py` file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
+The [model.py](model.py) file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
 
-The `data.py` file contains the code to load the simulator data from the `driving_log.csv` file and to align the distribution of the data.
+The [data.py](data.py) file contains the code to load the simulator data from the `driving_log.csv` file and to align the distribution of the data.
 
-The `config.py` is used to define some project wide parameters, such as batch size, number of epochs, ect.
+The [config.py](config.py) is used to define some project wide parameters, such as batch size, number of epochs, ect.
 
 ### Model Architecture and Training Strategy
 
@@ -88,23 +89,23 @@ For non-linearity, [ELU activations](https://arxiv.org/pdf/1511.07289v1.pdf) are
 The original NVIDIA model uses an input size of 66x200x3. I tried that, but with that I did not manage to drive the car a full round in the simulator (currently I do not know exactly why!). 
 So I use the original image size of 160x320x3 as input size for my network. The cropping layer will reduce the size to 65x320x3 before the image is fed to the convolutional layers. 
 
-Here is a visualization of the final model architecture:
+Here the final model architecture:
 ![alt text][image1]
 
-The implementation can be found in `model.py` lines 151-185.
+The implementation can be found in [model.py](model.py) lines 151-185.
 
 #### Attempts to reduce overfitting in the model
-The model was trained and validated on different data sets to ensure that the model was not overfitting (model.py line 48). 
+The model was trained and validated on different data sets to ensure that the model was not overfitting ([model.py](model.py) line 48). 
 And the model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
-I also used image normalization, image cropping and a dropout layer for regularization (model.py lines 151-185).
+I also used image normalization, image cropping and a dropout layer for regularization ([model.py](model.py) lines 151-185).
 
 Further I used an EarlyStopping-callback to stop the training process automatically if the value-loss has not improved over some epochs. 
-And a ModelCheckpoint-callback to save only the best trained model (model.py lines 192-197). 
+And a ModelCheckpoint-callback to save only the best trained model ([model.py](model.py) lines 192-197). 
 
 #### Model parameter tuning
 Here are the parameters for tuning the model and the training process. 
-The tuning parameters can be adjusted in the `config.py` file.
+The tuning parameters can be adjusted in the [config.py](config.py) file.
 
 * `NUM_EPOCHS` = 20 (Max number of epochs, since early stopping is used)
 * `BATCH_SIZE` = 128
@@ -113,9 +114,9 @@ The tuning parameters can be adjusted in the `config.py` file.
 * `STEERING_THRESHOLD` = 0.15
 * `NUM_DATA_BINS`= 21
 
-I used an adam optimizer with an learning rate of 1.0e-4 (model.py line 220). 
+I used an adam optimizer with an learning rate of 1.0e-4 ([model.py](model.py) line 220). 
 
-Since this is a regression problem I used the MSE (Mean Squared Error) loss function (model.py line 220).
+Since this is a regression problem I used the MSE (Mean Squared Error) loss function ([model.py](model.py) line 220).
 
 The `STEERING_CORRECTION` is used to adjust the steering angles for the left (+) or right (-) camera images.
 
@@ -141,7 +142,7 @@ After that, I'll find the group with the most records (that's where the car is d
 The following diagram shows the distribution of the data by the steering angle, after the adjustment has been made:
 •	Histogramm
 
-The data distribution is done in data.py lines XXX-YYY.
+The data distribution is done in [data.py](data.py) lines XXX-YYY.
 
 #### Loading Data
 Shuffle Data after loading
@@ -202,7 +203,7 @@ At the end of the process, the vehicle is able to drive autonomously around the 
 
 #### 2. Final Model Architecture
 
-The final model architecture (model.py lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
+The final model architecture ([model.py](model.py) lines 18-24) consisted of a convolution neural network with the following layers and layer sizes ...
 
 Here is a visualization of the architecture (note: visualizing the architecture is optional according to the project rubric)
 
