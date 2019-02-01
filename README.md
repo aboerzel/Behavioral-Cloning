@@ -167,7 +167,9 @@ BGR => RGB
 Normalization and Mean-Center data between -0.5 und +0.5
 Cropping ROI 160x320x3 => 90x320x3
 
-![alt text][cropped_image]
+|Original Image|Cropped Image|
+|-------------|-------------|
+|![alt text][sample_image]|![alt text][cropped_image]|
 
 #### Image Augmentation
 Random Brightness
