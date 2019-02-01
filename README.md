@@ -18,13 +18,14 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[image1]: ./examples/model-architecture.png "Model Visualization"
-[image2]: ./examples/nVidia_model.png "Grayscaling"
-[image3]: ./examples/placeholder_small.png "Recovery Image"
-[image4]: ./examples/placeholder_small.png "Recovery Image"
+[model_architecture]: ./examples/model-architecture.png "Model Architecture"
+[nvidia_model]: ./examples/nVidia_model.png "NVIDIA Model Architecture"
+[distribution_1]: ./examples/steering_distribution_before.png "Steering Distribution Before"
+[distribution_2]: ./examples/steering_distribution_after.png "Steering Distribution After"
 [image5]: ./examples/placeholder_small.png "Recovery Image"
 [image6]: ./examples/placeholder_small.png "Normal Image"
 [image7]: ./examples/placeholder_small.png "Flipped Image"
+[train_history]: ./examples/training-history.png "Training History"
 
 ## Rubric Points
 ### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
@@ -69,7 +70,7 @@ The network consists of a normalization layer, 5 convolutional layers, a dropdow
 Since this is a regression problem, the output layer is a single continuous value that provides the predicted steering angle.
 
 **NVIDIA Model Architecture**
-![alt text][image2]
+![alt text][nvidia_model]
 
 
 **Final Model Architecture**
@@ -91,7 +92,7 @@ So I use the original image size of 160x320x3 as input size for my network. The 
 
 Here the final model architecture:
 
-![alt text][image1]
+![alt text][model_architecture]
 
 The implementation can be found in [model.py](model.py) lines 151-185.
 
@@ -129,7 +130,8 @@ I used the [dataset](https://d17h27t6h515a5.cloudfront.net/topher/2016/December/
 A big problem is the extremely uneven number of records in which the car drives straight ahead (steering angle between `-STEERING_THRESHOLD` and `+STEERING_THRESHOLD`) versus the data sets where the car is cornering.
 
 The following diagram shows the distribution of the data by the steering angle:
-•	Histogramm
+
+![alt text][distribution_1]
 
 Another problem is that for some difficult situations, e.g. the bridge with another road surface, few sharp curves or the curve without roadside, only very few records are available compared to the normal cases. Unfortunately, it is hardly possible to identify these records.
 
@@ -141,7 +143,8 @@ To avoid this problem, I group the data sets based on the steering angle in `NUM
 After that, I'll find the group with the most records (that's where the car is driving straight ahead) and fill up each of the other groups with records randomly selected from the same group, up to the number of items of largest group * 0,75. Thus, the distribution of steering angles in the data set is compensated without losing the rare records. However, the disadvantage is that the number of data to be trained has increased massively.
 
 The following diagram shows the distribution of the data by the steering angle, after the adjustment has been made:
-•	Histogramm
+
+![alt text][distribution_2]
 
 The data distribution is done in [data.py](data.py) lines XXX-YYY.
 
