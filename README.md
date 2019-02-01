@@ -90,6 +90,7 @@ The original NVIDIA model uses an input size of 66x200x3. I tried that, but with
 So I use the original image size of 160x320x3 as input size for my network. The cropping layer will reduce the size to 65x320x3 before the image is fed to the convolutional layers. 
 
 Here the final model architecture:
+
 ![alt text][image1]
 
 The implementation can be found in [model.py](model.py) lines 151-185.
@@ -118,12 +119,12 @@ I used an adam optimizer with an learning rate of 1.0e-4 ([model.py](model.py) l
 
 Since this is a regression problem I used the MSE (Mean Squared Error) loss function ([model.py](model.py) line 220).
 
-The `STEERING_CORRECTION` is used to adjust the steering angles for the left (+) or right (-) camera images.
+The `STEERING_CORRECTION` parameter is used to adjust the steering angles for the left (+) or right (-) camera images.
 
-The `STEERING_THRESHOLD` is used to split the driving samples where the car is driving straight ahead or cornering. This is needed for the alignment of the data distribution, explained later.
+The `STEERING_THRESHOLD` parameter is used to split the driving samples where the car is driving straight ahead or cornering. This is needed for the alignment of the data distribution, explained later.
 
 #### Appropriate training data
-I used the dataset provided by Udacity to train the model, but this data set contains some pitfalls that make it difficult to train a model that lets the car drive a complete lap in the simulator without a breakdown. 
+I used the [dataset](https://d17h27t6h515a5.cloudfront.net/topher/2016/December/584f6edd_data/data.zip) provided by Udacity to train the model, but this data set contains some pitfalls that make it difficult to train a model that lets the car drive a complete lap in the simulator without a breakdown. 
 
 A big problem is the extremely uneven number of records in which the car drives straight ahead (steering angle between -STEERING_THRESHOLD and + STEERING_THRESHOLD) versus the data sets where the car is cornering.
 
