@@ -31,18 +31,8 @@ print("[INFO] loading data...")
 image_paths, measurements = read_samples_from_file(os.path.join(data_folder, config.DRIVING_LOG),
                                                    config.STEERING_CORRECTION)
 
-# show the distribution of the steering angles
-# plt.hist(measurements[:, 0], bins=config.NUM_DATA_BINS)
-# plt.savefig('./examples/steering_distribution_before.png')
-# plt.show()
-
 # ensure even distribution of the steering angles
 X_train, y_train = distribute_data(image_paths, measurements)
-
-# show the new distribution of the steering angles
-# plt.hist(y_train[:, 0], bins=config.NUM_DATA_BINS)
-# plt.savefig('./examples/steering_distribution_after.png')
-# plt.show()
 
 # split into train and validation data
 X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.20, shuffle=True)
