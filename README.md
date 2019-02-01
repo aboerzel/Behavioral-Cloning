@@ -167,8 +167,6 @@ BGR => RGB
 Normalization and Mean-Center data between -0.5 und +0.5
 Cropping ROI 160x320x3 => 90x320x3
 
-![][sample_image]
-
 |Original Image|Cropped Image|
 |-------------|-------------|
 |![][sample_image]|![][cropped_image]|
