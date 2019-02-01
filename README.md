@@ -126,7 +126,7 @@ The `STEERING_THRESHOLD` parameter is used to split the driving samples where th
 #### Appropriate training data
 I used the [dataset](https://d17h27t6h515a5.cloudfront.net/topher/2016/December/584f6edd_data/data.zip) provided by Udacity to train the model, but this data set contains some pitfalls that make it difficult to train a model that lets the car drive a complete lap in the simulator without a breakdown. 
 
-A big problem is the extremely uneven number of records in which the car drives straight ahead (steering angle between -STEERING_THRESHOLD and + STEERING_THRESHOLD) versus the data sets where the car is cornering.
+A big problem is the extremely uneven number of records in which the car drives straight ahead (steering angle between `-STEERING_THRESHOLD` and `+STEERING_THRESHOLD`) versus the data sets where the car is cornering.
 
 The following diagram shows the distribution of the data by the steering angle:
 •	Histogramm
@@ -136,7 +136,7 @@ Another problem is that for some difficult situations, e.g. the bridge with anot
 To fix the extremely unequal number of data sets with straight-ahead driving and cornering, one could simply delete a randomly selected part of the data records with straight-ahead driving. 
 However, there is the risk that the rare special cases will be deleted, which would mean that the car leaves the road in such a special case. So that's not the solution!
 
-To avoid this problem, I group the data sets based on the steering angle in NUM_DATA_BINS areas between -1 and +1 using a histogram. 
+To avoid this problem, I group the data sets based on the steering angle in `NUM_DATA_BINS` areas between -1 and +1 using a histogram. 
 
 After that, I'll find the group with the most records (that's where the car is driving straight ahead) and fill up each of the other groups with records randomly selected from the same group, up to the number of items of largest group * 0,75. Thus, the distribution of steering angles in the data set is compensated without losing the rare records. However, the disadvantage is that the number of data to be trained has increased massively.
 
@@ -148,7 +148,7 @@ The data distribution is done in [data.py](data.py) lines XXX-YYY.
 #### Loading Data
 Shuffle Data after loading
 
-Wenn steering angle zwischen - STEERING_THRESHOLD und + STEERING_THRESHOLD (geradeaus) => center image only
+Wenn steering angle zwischen `-STEERING_THRESHOLD` und `+STEERING_THRESHOLD` (geradeaus) => center image only
 
 Wenn steering angle > +STEERING_THRESHOLD => center image AND left image mit STEERING_CORRECTION + 
 
