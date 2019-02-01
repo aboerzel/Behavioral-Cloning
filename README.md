@@ -1,12 +1,6 @@
 # **Behavioral Cloning** 
 
-## Writeup Template
-
-### You can use this file as a template for your writeup if you want to submit it as a markdown file, but feel free to use some other method and submit a pdf if you prefer.
-
----
-
-**Behavioral Cloning Project**
+## Udacity Self Driving Car Engineer Nanodegree - Project 4
 
 The goals / steps of this project are the following:
 * Use the simulator to collect data of good driving behavior
