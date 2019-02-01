@@ -16,7 +16,7 @@ The goals / steps of this project are the following:
 [nvidia_model]: ./examples/nVidia_model.png "NVIDIA Model Architecture"
 [distribution_1]: ./examples/steering_distribution_before.png "Steering Distribution Before"
 [distribution_2]: ./examples/steering_distribution_after.png "Steering Distribution After"
-[sample_image]: ./examples/sample_image.png "Sample Image"
+[sample_image]: ./examples/sample_image1.png "Sample Image"
 [cropped_image]: ./examples/cropped_image.png "Sample Image"
 [random_brightness]: ./examples/random_brightness.png "Random Brightness"
 [random_shift]: ./examples/random_shift.png "Random Shift"
