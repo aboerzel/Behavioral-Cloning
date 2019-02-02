@@ -24,7 +24,7 @@ The goals / steps of this project are the following:
 [train_image_batch]: ./examples/train_image_batch.png "Train Image Batch"
 [train_history]: ./examples/training-history.png "Training History"
 
-[video_track_1]: output/version-1/video.mp4 "Video"
+[video_track_1]: video.mp4 "Video"
 
 ## Rubric Points
 ### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
@@ -40,7 +40,7 @@ My project includes the following files:
 * [config.py](config.py) defines global parameters for the project
 * [drive.py](drive.py) for driving the car in autonomous mode
 * `model.h5` the trained convolution neural network
-* [video.mp4](output/version-1/video.mp4) video of the recordings by drive.py. while the car is driving track-1 in the simulator.
+* [video.mp4](video.mp4) video of the recordings by drive.py. while the car is driving track-1 in the simulator.
 * `README.md` summarizing the results
 
 
