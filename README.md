@@ -163,7 +163,7 @@ For this I use the following rules:
 * If steering angle is less than -`STEERING_THRESHOLD` then I use the center image and the right image.
  The steering angle for the right image is corrected by subtracting `STEERING_CORRECTION` from it. 
 
-The `STEERING THRESHOLD` was determined by evaluating the histogram.
+The `STEERING THRESHOLD` was determined by evaluating the steering distribution histogram.
 
 The `STEERING_CORRECTION` value was determined by a lot of trial and error.
 
@@ -178,10 +178,12 @@ This step is done in [model.py](model.py) line 39.
 
 Since the images of the data set are stored in BGR format, but the simulator works with the RGB format, I convert the images into RGB format directly after loading [model.py](model.py) lines 48-50.
 
-Normalization and Mean-Center data between -0.5 und +0.5
-Cropping ROI 160x320x3 => 80x320x3
+In the preprocessing step the images are normalized and mean-centered between -/+0.5.
+In addition, image parts that do not contribute to driving behavior, such as the sky and the car front, are cut off.
+This reduces the image size from 160x320x3 to 80x320x3. 
+Both preprocessing steps are done inside the network architecture using a lambda- and a cropping-layer [data.py](data.py) lines 146-149.
 
-|Original Image|Cropped Image|
+|Original Image|Cropped Image (ROI)|
 |-------------|-------------|
 |![][sample_image]|![][cropped_image]|
 
