@@ -189,6 +189,8 @@ Both preprocessing steps are done inside the network architecture using a lambda
 
 
 #### Image Augmentation
+
+
 Random Brightness
 ![alt text][random_brightness]
 
@@ -206,7 +208,9 @@ Using generator to generate randomly augmented images for each batch…
 
 #### Output Video
 
-Here are the result videos that I recorded while the car is driving the predetermined tracks in the simulator autonomously:
+Here are the result videos that I recorded while the car is driving the predetermined tracks in the simulator autonomously.
+
+The videos were created on my computer with an Nvidia GeForce GTX 1050 GPU. Unfortunately, the videos have periodic short hangs, but this is because my computer does not have enough power.
 
 **Track 1**
 
@@ -216,6 +220,8 @@ Here are the result videos that I recorded while the car is driving the predeter
 
 
 **Challenge Track 2**
+
+There are the one or the other dangerous situation here, but if one considers that the model has been trained exclusively with data of the simple track 1, the result is surprisingly good!
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/yizCGQiDgPs/0.jpg)](https://youtu.be/yizCGQiDgPs)
 
