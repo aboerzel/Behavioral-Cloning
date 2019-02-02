@@ -9,6 +9,7 @@ from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, Cropping2D
 from keras.models import Sequential
 from keras.optimizers import Adam
+from keras.regularizers import l2
 from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
@@ -145,7 +146,7 @@ class Preprocessing:
         # normalize and mean centering between -0.5 and +0.5
         model.add(Lambda(lambda x: x / 255 - 0.5, input_shape=input_shape))
         # remove the sky and the car front
-        model.add(Cropping2D(cropping=((70, 25), (0, 0))))
+        model.add(Cropping2D(cropping=((60, 20), (0, 0))))
         return model
 
 
@@ -153,23 +154,23 @@ class Preprocessing:
 class Nvidia:
     @staticmethod
     def build(base_model):
-        base_model.add(Conv2D(24, (5, 5), strides=(2, 2)))
+        base_model.add(Conv2D(24, (5, 5), strides=(2, 2), kernel_regularizer=l2(config.L2_WEIGHT)))
         base_model.add(Activation('elu'))
-        base_model.add(Conv2D(36, (5, 5), strides=(2, 2)))
+        base_model.add(Conv2D(36, (5, 5), strides=(2, 2), kernel_regularizer=l2(config.L2_WEIGHT)))
         base_model.add(Activation('elu'))
-        base_model.add(Conv2D(48, (5, 5), strides=(2, 2)))
+        base_model.add(Conv2D(48, (5, 5), strides=(2, 2), kernel_regularizer=l2(config.L2_WEIGHT)))
         base_model.add(Activation('elu'))
-        base_model.add(Conv2D(64, (3, 3)))
+        base_model.add(Conv2D(64, (3, 3), kernel_regularizer=l2(config.L2_WEIGHT)))
         base_model.add(Activation('elu'))
-        base_model.add(Conv2D(64, (3, 3)))
+        base_model.add(Conv2D(64, (3, 3), kernel_regularizer=l2(config.L2_WEIGHT)))
         base_model.add(Activation('elu'))
         base_model.add(Flatten())
         base_model.add(Dropout(0.5))
-        base_model.add(Dense(100))
+        base_model.add(Dense(100, kernel_regularizer=l2(config.L2_WEIGHT)))
         base_model.add(Activation('elu'))
-        base_model.add(Dense(50))
+        base_model.add(Dense(50, kernel_regularizer=l2(config.L2_WEIGHT)))
         base_model.add(Activation('elu'))
-        base_model.add(Dense(10))
+        base_model.add(Dense(10, kernel_regularizer=l2(config.L2_WEIGHT)))
         base_model.add(Activation('elu'))
         base_model.add(Dense(1))
         return base_model

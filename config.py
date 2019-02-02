@@ -16,6 +16,7 @@ IMAGE_DEPTH = 3
 BATCH_SIZE = 128
 NUM_EPOCHS = 100
 LEARNING_RATE = 1.0e-4
+L2_WEIGHT = 0.001
 
 # number of bins for data distribution
 NUM_DATA_BINS = 21

@@ -24,7 +24,7 @@ The goals / steps of this project are the following:
 [train_image_batch]: ./examples/train_image_batch.png "Train Image Batch"
 [train_history]: ./examples/training-history.png "Training History"
 
-[video_track_1]: ./video.mp4 "Video"
+[video_track_1]: output/version-1/video.mp4 "Video"
 
 ## Rubric Points
 ### Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
@@ -40,7 +40,7 @@ My project includes the following files:
 * [config.py](config.py) defines global parameters for the project
 * [drive.py](drive.py) for driving the car in autonomous mode
 * `model.h5` the trained convolution neural network
-* [video.mp4](video.mp4) video of the recordings by drive.py. while the car is driving track-1 in the simulator.
+* [video.mp4](output/version-1/video.mp4) video of the recordings by drive.py. while the car is driving track-1 in the simulator.
 * `README.md` summarizing the results
 
 
@@ -54,7 +54,7 @@ python drive.py model.h5
 
 The [model.py](model.py) file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
 
-The [data.py](data.py) file contains the code to load the simulator data from the `driving_log.csv` file and to align the distribution of the data.
+The [data.py](data.py) file contains the code to load the simulator data from the `driving_log.csv` file and to compensate the distribution of the data.
 
 The [config.py](config.py) is used to define some project wide parameters, such as batch size, number of epochs, ect.
 
@@ -87,7 +87,7 @@ After the convolutional layers, a 50% dropout layer was added to prevent overfit
 For non-linearity, [ELU activations](https://arxiv.org/pdf/1511.07289v1.pdf) are used for each convolutional and each fully connected layer.
 
 The original NVIDIA model uses an input size of 66x200x3. I tried that, but with that I did not manage to drive the car a full round in the simulator (currently I do not know exactly why!). 
-So I use the original image size of 160x320x3 as input size for my network. The cropping layer will reduce the size to 65x320x3 before the image is fed to the convolutional layers. 
+So I use the original image size of 160x320x3 as input size for my network. The cropping layer will reduce the size to 80x320x3 before the image is fed to the convolutional layers. 
 
 Here the final model architecture:
 
@@ -111,11 +111,14 @@ The tuning parameters can be adjusted in the [config.py](config.py) file.
 * `NUM_EPOCHS` = 20 (Max number of epochs, since early stopping is used)
 * `BATCH_SIZE` = 128
 * `LERNING_RATE` = 1.0e-4
+* `L2_WEIGHT`= 0.001
 * `STEERING_CORRECTION` = 0.25
 * `STEERING_THRESHOLD` = 0.15
 * `NUM_DATA_BINS`= 21
 
 I used an adam optimizer with an learning rate of 1.0e-4 ([model.py](model.py) line 220). 
+
+L2-regularisation...
 
 Since this is a regression problem I used the MSE (Mean Squared Error) loss function ([model.py](model.py) line 220).
 
@@ -126,7 +129,7 @@ The `STEERING_THRESHOLD` parameter is used to split the driving samples where th
 #### Appropriate training data
 I used the [dataset](https://d17h27t6h515a5.cloudfront.net/topher/2016/December/584f6edd_data/data.zip) provided by Udacity to train the model, but this data set contains some pitfalls that make it difficult to train a model that lets the car drive a complete lap in the simulator without a breakdown. 
 
-A big problem is the extremely uneven number of records in which the car drives straight ahead (steering angle between `-STEERING_THRESHOLD` and `+STEERING_THRESHOLD`) versus the data sets where the car is cornering.
+A big problem is the extremely uneven number of records in which the car drives straight ahead (steering angle between -`STEERING_THRESHOLD` and +`STEERING_THRESHOLD`) versus the data sets where the car is cornering.
 
 The following diagram shows the distribution of the data by the steering angle:
 
@@ -165,7 +168,7 @@ Split the data in a training set and a validation set. I use only 20% of the rec
 #### Image Preprocessing
 BGR => RGB 
 Normalization and Mean-Center data between -0.5 und +0.5
-Cropping ROI 160x320x3 => 90x320x3
+Cropping ROI 160x320x3 => 80x320x3
 
 |Original Image|Cropped Image|
 |-------------|-------------|
@@ -194,7 +197,7 @@ Track 1
 
 |Simulator View|Camera View|
 |-------------|-------------|
-|[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/1_OVLiL6vUM/0.jpg)](https://youtu.be/1_OVLiL6vUM)|[![](examples/track1.jpg)](video.mp4)|
+|[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/1_OVLiL6vUM/0.jpg)](https://youtu.be/1_OVLiL6vUM)|[![](examples/track1.jpg)](output/version-1/video.mp4)|
 
 
 Challenge Track 2
