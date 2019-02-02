@@ -93,16 +93,17 @@ Here the final model architecture:
 
 ![alt text][model_architecture]
 
-The implementation can be found in [model.py](model.py) lines 151-185.
+The implementation can be found in [model.py](model.py) lines 140-176.
 
 #### Attempts to reduce overfitting in the model
-The model was trained and validated on different data sets to ensure that the model was not overfitting ([model.py](model.py) line 48). 
+The model was trained and validated on different data sets to ensure that the model was not overfitting ([model.py](model.py) line 39). 
 And the model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
-I also used image normalization, image cropping and a dropout layer for regularization ([model.py](model.py) lines 151-185).
+I used image normalization, image cropping and a dropout layer for regularization ([model.py](model.py) lines 140-176).
+Also I used L2-regularisation on each convolutional and each fully connected layer to combat overfitting ([model.py](model.py) lines 157-173).
 
 Further I used an EarlyStopping-callback to stop the training process automatically if the value-loss has not improved over some epochs. 
-And a ModelCheckpoint-callback to save only the best trained model ([model.py](model.py) lines 192-197). 
+And a ModelCheckpoint-callback to save only the best trained model ([model.py](model.py) lines 179-188). 
 
 #### Model parameter tuning
 Here are the parameters for tuning the model and the training process. 
@@ -116,11 +117,9 @@ The tuning parameters can be adjusted in the [config.py](config.py) file.
 * `STEERING_THRESHOLD` = 0.15
 * `NUM_DATA_BINS`= 21
 
-I used an adam optimizer with an learning rate of 1.0e-4 ([model.py](model.py) line 220). 
+I used an adam optimizer with an learning rate of 1.0e-4 ([model.py](model.py) line 211). 
 
-L2-regularisation...
-
-Since this is a regression problem I used the MSE (Mean Squared Error) loss function ([model.py](model.py) line 220).
+Since this is a regression problem I used the MSE (Mean Squared Error) loss function ([model.py](model.py) line 211).
 
 The `STEERING_CORRECTION` parameter is used to adjust the steering angles for the left (+) or right (-) camera images.
 
@@ -148,7 +147,7 @@ The following diagram shows the distribution of the data by the steering angle, 
 
 ![alt text][distribution_2]
 
-The data compensation is done in [data.py](data.py) lines XXX-YYY.
+The data compensation is done in [data.py](data.py) lines 52-72.
 
 #### Loading Data
 Shuffle Data after loading
