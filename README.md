@@ -211,8 +211,10 @@ I flip every 2nd image horizontally to simulate the mirrored situation.
     
 **Train Batch Generator**
 
-Using generator to generate randomly augmented images for each batch…
+I use a generator to randomly create new images from the train dataset for each batch. 
+The generator combines all the image augmentations described above and shuffles the data again after each epoch.
 
+Here are a few examples of what the train generator delivers:
 ![alt text][train_image_batch]
 
 This implementation is done in [model.py](model.py) lines 83-107.
