@@ -197,12 +197,12 @@ Track 1
 
 |Simulator View|Camera View|
 |-------------|-------------|
-|[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/1_OVLiL6vUM/0.jpg)](https://youtu.be/1_OVLiL6vUM)|[![](examples/track1.jpg)](output/version-1/video.mp4)|
+|[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/EpAXuGkuFr8/0.jpg)](https://youtu.be/EpAXuGkuFr8)|[![](examples/track1.jpg)](output/version-1/video.mp4)|
 
 
 Challenge Track 2
 
-[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/O-1jHB4z5SU/0.jpg)](https://youtu.be/O-1jHB4z5SU)
+[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/yizCGQiDgPs/0.jpg)](https://youtu.be/yizCGQiDgPs)
 
 ---
 
