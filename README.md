@@ -206,16 +206,16 @@ Using generator to generate randomly augmented images for each batch…
 
 #### Output Video
 
-Result videos:
+Here are the result videos that I recorded while the car is driving the predetermined tracks in the simulator autonomously:
 
-Track 1
+**Track 1**
 
 |Simulator View|Camera View|
 |-------------|-------------|
 |[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/EpAXuGkuFr8/0.jpg)](https://youtu.be/EpAXuGkuFr8)|[![](examples/track1.jpg)](output/version-1/video.mp4)|
 
 
-Challenge Track 2
+**Challenge Track 2**
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/yizCGQiDgPs/0.jpg)](https://youtu.be/yizCGQiDgPs)
 
