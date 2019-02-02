@@ -171,6 +171,7 @@ This step is done in [data.py](data.py) lines 9-49.
 
 After loading the data is shuffled and split into a train set and a validation set.
 I use only 20% of the records for validation to avoid losing too many special training records. 
+After the train-test spilt, the train dataset contains 58914 items and the validation dataset contains 14729 items.
 
 This step is done in [model.py](model.py) line 39.
 
@@ -189,24 +190,34 @@ Both preprocessing steps are done inside the network architecture using a lambda
 
 
 #### Image Augmentation
+sss
 
+**Random Brightness**
 
-Random Brightness
+sds
+
 ![alt text][random_brightness]
 
-Random horizontal and vertical shift
+**Random horizontal and vertical shift**
+
+ss
+
 ![alt text][random_shift]
 
-Flip horizontal
+**Horizontal Flip**
+
+s
+
 ![alt text][horizontal_flip]
     
+**Train Batch Generator**
+
 Using generator to generate randomly augmented images for each batch…
+
 ![alt text][train_image_batch]
 
 
-
-
-#### Output Video
+#### Output Videos
 
 Here are the result videos that I recorded while the car is driving the predetermined tracks in the simulator autonomously.
 
@@ -224,18 +235,3 @@ The videos were created on my computer with an Nvidia GeForce GTX 1050 GPU. Unfo
 There are the one or the other dangerous situation here, but if one considers that the model has been trained exclusively with data of the simple track 1, the result is surprisingly good!
 
 [![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/yizCGQiDgPs/0.jpg)](https://youtu.be/yizCGQiDgPs)
-
----
-
-
-
-
-
-
-#### 3. Creation of the Training Set & Training Process
-
-After the collection process, I had X number of data points. I then preprocessed this data by ...
-
-I finally randomly shuffled the data set and put Y% of the data into a validation set. 
-
-I used this training data for training the model. The validation set helped determine if the model was over or under fitting. The ideal number of epochs was Z as evidenced by ... I used an adam optimizer so that manually training the learning rate wasn't necessary.
