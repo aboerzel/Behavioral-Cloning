@@ -175,7 +175,9 @@ I use only 20% of the records for validation to avoid losing too many special tr
 This step is done in [model.py](model.py) line 39.
 
 #### Image Preprocessing
-BGR => RGB 
+
+Since the images of the data set are stored in BGR format, but the simulator works with the RGB format, I convert the images into RGB format directly after loading [model.py](model.py) lines 48-50.
+
 Normalization and Mean-Center data between -0.5 und +0.5
 Cropping ROI 160x320x3 => 80x320x3
 
@@ -196,6 +198,8 @@ Flip horizontal
     
 Using generator to generate randomly augmented images for each batch…
 ![alt text][train_image_batch]
+
+
 
 
 #### Output Video
