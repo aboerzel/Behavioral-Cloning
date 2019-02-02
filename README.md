@@ -77,7 +77,7 @@ Since this is a regression problem, the output layer is a single continuous valu
 For this project I have made some modifications to the original NVIDIA model. The final model architecture is described here:
 
 First I used two layers for preprocessing. The lambda layer normalizes and mean-centers the image data between +/- 0.5. 
-The following cropping layer removes the sky and the car front from the image, which are not needed for learning.
+The following cropping layer removes the sky and the car front from the image, which have no relevance to driving behavior.
 
 Each of the 5 convolutional layers has a 1x1 stride, and a 2x2 max pooling operation to reduce spatial resolution. 
 The first 3 convolutional layers use a 5x5 filter while the final 2 use a 3x3 filter as the input dimensionality is reduced.
@@ -189,23 +189,23 @@ Both preprocessing steps are done inside the network architecture using a lambda
 
 #### Image Augmentation
 
-sss
+In order to obtain a large variance of training data, I apply various augmentation techniques to the training data:
 
 **Random Brightness**
 
-sds
+I apply a random brightness to the images, to simulate various lighting conditions such as sunlight, darkness, shadows, ect.
 
 ![alt text][random_brightness]
 
 **Random horizontal and vertical shift**
 
-ss
+I randomly move the pictures a little bit horizontally and vertically to simulate camera wobbles.
 
 ![alt text][random_shift]
 
 **Horizontal Flip**
 
-s
+I flip every 2nd image horizontally to simulate the mirrored situation.
 
 ![alt text][horizontal_flip]
     
@@ -215,6 +215,7 @@ Using generator to generate randomly augmented images for each batch…
 
 ![alt text][train_image_batch]
 
+This implementation is done in [model.py](model.py) lines 83-107.
 
 #### Output Videos
 
