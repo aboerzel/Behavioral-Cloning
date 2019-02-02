@@ -226,7 +226,7 @@ The videos were created on my computer with an Nvidia GeForce GTX 1050 GPU. Unfo
 
 |Simulator View|Camera View|
 |-------------|-------------|
-|[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/EpAXuGkuFr8/0.jpg)](https://youtu.be/EpAXuGkuFr8)|[![](examples/track1.jpg)](output/version-1/video.mp4)|
+|[![IMAGE ALT TEXT HERE](https://img.youtube.com/vi/EpAXuGkuFr8/0.jpg)](https://youtu.be/EpAXuGkuFr8)|[![](examples/track1.jpg)](video.mp4)|
 
 
 **Challenge Track 2**
