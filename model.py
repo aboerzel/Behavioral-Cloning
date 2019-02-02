@@ -35,7 +35,7 @@ image_paths, measurements = read_samples_from_file(os.path.join(data_folder, con
 # ensure even distribution of the steering angles
 X_train, y_train = distribute_data(image_paths, measurements)
 
-# split into train and validation data
+# split into train and validation data and shuffle data
 X_train, X_valid, y_train, y_valid = train_test_split(X_train, y_train, test_size=0.20, shuffle=True)
 
 # print the length of the train- and validation data
