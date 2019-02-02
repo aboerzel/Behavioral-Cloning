@@ -150,19 +150,29 @@ The following diagram shows the distribution of the data by the steering angle, 
 The data compensation is done in [data.py](data.py) lines 52-72.
 
 #### Loading Data
-Shuffle Data after loading
 
-Wenn steering angle zwischen -`STEERING_THRESHOLD` und +`STEERING_THRESHOLD` (geradeaus) => center image only
+In the first step, I load the data from the `driving_log.csv` file. 
+Hereby I decide on the basis of the steering angle which of the 3 camera images (center, left, right) I use. 
+For this I use the following rules:
 
-Wenn steering angle > +STEERING_THRESHOLD => center image AND left image mit STEERING_CORRECTION + 
+* If steering angle between -`STEERING_THRESHOLD` and +`STEERING_THRESHOLD` (car drives straight ahead), I use only the center image.
 
-Wenn steering angle < - STEERING_THRESHOLD => center image AND right image mit STEERING_CORRECTION – 
+* If steering angle is greater than +`STEERING_THRESHOLD` then I use the center and the left image.
+ The steering angle for the left image is corrected by adding `STEERING_CORRECTION` to it. 
 
-The STEERING THRESHOLD was determined by evaluating the histogram.
+* If steering angle is less than -`STEERING_THRESHOLD` then I use the center image and the right image.
+ The steering angle for the right image is corrected by subtracting `STEERING_CORRECTION` from it. 
 
-The STEERING_CORRECTION value was determined by a lot of trial and error.
+The `STEERING THRESHOLD` was determined by evaluating the histogram.
 
-Split the data in a training set and a validation set. I use only 20% of the records for validation to avoid losing too many special training records. 
+The `STEERING_CORRECTION` value was determined by a lot of trial and error.
+
+This step is done in [data.py](data.py) lines 9-49.
+
+After loading the data is shuffled and split into a train set and a validation set.
+I use only 20% of the records for validation to avoid losing too many special training records. 
+
+This step is done in [model.py](model.py) line 39.
 
 #### Image Preprocessing
 BGR => RGB 
