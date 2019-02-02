@@ -155,12 +155,12 @@ In the first step, I load the data from the `driving_log.csv` file.
 Hereby I decide on the basis of the steering angle which of the 3 camera images (center, left, right) I use. 
 For this I use the following rules:
 
-* If steering angle between -`STEERING_THRESHOLD` and +`STEERING_THRESHOLD` (car drives straight ahead), I use only the center image.
+* If steering angle is between -`STEERING_THRESHOLD` and +`STEERING_THRESHOLD` (car drives straight ahead), I use only the center image.
 
-* If steering angle is greater than +`STEERING_THRESHOLD` then I use the center and the left image.
+* If steering angle is greater than +`STEERING_THRESHOLD` (card drifts left), then I use the center and the left image.
  The steering angle for the left image is corrected by adding `STEERING_CORRECTION` to it. 
 
-* If steering angle is less than -`STEERING_THRESHOLD` then I use the center image and the right image.
+* If steering angle is less than -`STEERING_THRESHOLD` (car drifts right), then I use the center image and the right image.
  The steering angle for the right image is corrected by subtracting `STEERING_CORRECTION` from it. 
 
 The `STEERING THRESHOLD` was determined by evaluating the steering distribution histogram.
@@ -169,15 +169,13 @@ The `STEERING_CORRECTION` value was determined by a lot of trial and error.
 
 This step is done in [data.py](data.py) lines 9-49.
 
-After loading the data is shuffled and split into a train set and a validation set.
+After loading the data it is shuffled and split into a train set and a validation set.
 I use only 20% of the records for validation to avoid losing too many special training records. 
 After the train-test spilt, the train dataset contains 58914 items and the validation dataset contains 14729 items.
 
 This step is done in [model.py](model.py) line 39.
 
 #### Image Preprocessing
-
-Since the images of the data set are stored in BGR format, but the simulator works with the RGB format, I convert the images into RGB format directly after loading [model.py](model.py) lines 48-50.
 
 In the preprocessing step the images are normalized and mean-centered between -/+0.5.
 In addition, image parts that do not contribute to driving behavior, such as the sky and the car front, are cut off.
@@ -190,6 +188,7 @@ Both preprocessing steps are done inside the network architecture using a lambda
 
 
 #### Image Augmentation
+
 sss
 
 **Random Brightness**
