@@ -6,7 +6,7 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, Cropping2D
+from keras.layers import Flatten, Dense, Lambda, Conv2D, Activation, Dropout, Cropping2D, BatchNormalization
 from keras.models import Sequential
 from keras.optimizers import Adam
 from keras.regularizers import l2
@@ -155,22 +155,32 @@ class Nvidia:
     @staticmethod
     def build(base_model):
         base_model.add(Conv2D(24, (5, 5), strides=(2, 2), kernel_regularizer=l2(config.L2_WEIGHT)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Conv2D(36, (5, 5), strides=(2, 2), kernel_regularizer=l2(config.L2_WEIGHT)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Conv2D(48, (5, 5), strides=(2, 2), kernel_regularizer=l2(config.L2_WEIGHT)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Conv2D(64, (3, 3), kernel_regularizer=l2(config.L2_WEIGHT)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Conv2D(64, (3, 3), kernel_regularizer=l2(config.L2_WEIGHT)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Flatten())
         base_model.add(Dropout(0.5))
         base_model.add(Dense(100, kernel_regularizer=l2(config.L2_WEIGHT)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
+        #base_model.add(Dropout(0.5))
         base_model.add(Dense(50, kernel_regularizer=l2(config.L2_WEIGHT)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
+        #.add(Dropout(0.5))
         base_model.add(Dense(10, kernel_regularizer=l2(config.L2_WEIGHT)))
+        base_model.add(BatchNormalization())
         base_model.add(Activation('elu'))
         base_model.add(Dense(1))
         return base_model
