@@ -184,7 +184,6 @@ class Nvidia:
 # define callbacks
 # - stop if there is no improvement during training
 # - save best model ever trained
-# - auto reduce learning rate if there is no improvement
 def get_callbacks():
     model_filepath = './{}/model.h5'.format(config.OUTPUT_PATH)
     callbacks = [
