@@ -128,6 +128,8 @@ def generate_validation_batch(image_paths, measurements, batch_size):
 
                     batch_images.append(image)
                     batch_steerings.append(steering)
+                batch_images.append(read_image(image_name))
+                batch_steerings.append(steering)
 
             yield shuffle(np.array(batch_images), np.array(batch_steerings))
 
