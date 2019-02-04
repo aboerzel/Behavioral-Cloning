@@ -47,18 +47,19 @@ print('y_valid: {}'.format((len(y_valid))))
 
 # read image from dataset
 def read_image(filename):
-    return cv2.imread(os.path.join(data_folder, filename))
+    img = cv2.imread(os.path.join(data_folder, filename))
+    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
 
 # image augmentation methods:
 # apply random brightness to the image to simulate sunlight, darkness, shadows, ect.
 def random_brightness(img):
-    # Convert 2 HSV colorspace from BGR colorspace
-    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    # Convert 2 HSV colorspace from RGB colorspace
+    hsv = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
     # Generate new random brightness
     rand = random.uniform(0.3, 1.0)
     hsv[:, :, 2] = rand * hsv[:, :, 2]
-    # Convert to RGB colorspace
+    # Convert back to RGB colorspace
     new_img = cv2.cvtColor(hsv, cv2.COLOR_HSV2RGB)
     return new_img
 
