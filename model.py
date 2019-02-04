@@ -80,7 +80,7 @@ def flip_horizontal(img, angle):
     return cv2.flip(img, 1), -angle
 
 
-# train generator, uses image augmentation and horizontal flip
+# train generator, uses image augmentation
 def generate_train_batch(image_paths, measurements, batch_size):
     while True:
         image_paths, measurements = shuffle(image_paths, measurements)
@@ -107,7 +107,7 @@ def generate_train_batch(image_paths, measurements, batch_size):
             yield shuffle(np.array(batch_images), np.array(batch_steerings))
 
 
-# validation generator, uses only horizontal flip, but no further image augmentation
+# validation generator, uses no image augmentation
 def generate_validation_batch(image_paths, measurements, batch_size):
     while True:
         image_paths, measurements = shuffle(image_paths, measurements)
@@ -121,13 +121,6 @@ def generate_validation_batch(image_paths, measurements, batch_size):
             batch_measurements = measurements[i: i + batch_size]
 
             for image_name, (steering, throttle, brake, speed) in zip(batch_image_paths, batch_measurements):
-                image = read_image(image_name)
-
-                if random.randint(0, 1) == 1:
-                    image, steering = flip_horizontal(image, steering)
-
-                    batch_images.append(image)
-                    batch_steerings.append(steering)
                 batch_images.append(read_image(image_name))
                 batch_steerings.append(steering)
 
