@@ -1,21 +1,19 @@
 import argparse
 import base64
-from datetime import datetime
 import os
 import shutil
-
-import numpy as np
-import socketio
-import eventlet
-import eventlet.wsgi
-from PIL import Image
-from flask import Flask
+from datetime import datetime
 from io import BytesIO
 
-from keras.models import load_model
+import cv2
+import eventlet.wsgi
 import h5py
+import numpy as np
+import socketio
+from PIL import Image
+from flask import Flask
 from keras import __version__ as keras_version
-from scipy import ndimage
+from keras.models import load_model
 
 sio = socketio.Server()
 app = Flask(__name__)
@@ -136,7 +134,7 @@ if __name__ == '__main__':
 
     # On my computer, error CUDA_XXX occurs when the first telemetry call occurs.
     # I was able to prevent the error by making a predictive call on the model once before the first telemetry call.
-    image = ndimage.imread('../sample_driving_data/IMG/center_2016_12_01_13_30_48_287.jpg')
+    image = cv2.imread('sample_driving_data/IMG/center_2016_12_01_13_30_48_287.jpg')
     image = np.asarray(image)
     steering_angle = float(model.predict(np.array([image]), batch_size=1))
     print(steering_angle)
