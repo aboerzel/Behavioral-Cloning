@@ -1,5 +1,5 @@
 # root path of the dataset
-DATASET_ROOT_PATH = "sample_driving_data"
+DATASET_ROOT_PATH = "../sample_driving_data"
 
 # driving log cvs file
 DRIVING_LOG = "driving_log.csv"

@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
     # On my computer, error CUDA_XXX occurs when the first telemetry call occurs.
     # I was able to prevent the error by making a predictive call on the model once before the first telemetry call.
-    image = cv2.imread('sample_driving_data/IMG/center_2016_12_01_13_30_48_287.jpg')
+    image = cv2.imread('../sample_driving_data/IMG/center_2016_12_01_13_30_48_287.jpg')
     image = np.asarray(image)
     steering_angle = float(model.predict(np.array([image]), batch_size=1))
     print(steering_angle)
